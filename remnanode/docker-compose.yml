@@ -10,7 +10,7 @@ services:
       - SECRET_KEY=$REMNAWAVE_SECRET_KEY
     volumes:
       - /dev/shm:/dev/shm
-      # - /var/log/remnanode:/var/log/remnanode
+      - /var/log/remnanode:/var/log/remnanode
       - /opt/remnawave/xray/share/zapret.dat:/usr/local/bin/zapret.dat
     logging:
       driver: "json-file"
