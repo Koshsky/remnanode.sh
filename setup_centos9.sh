@@ -35,6 +35,7 @@ update_packages() {
 
 install_software() {
     log "Установка необходимого ПО: fail2ban, certbot, ufw, docker-ce, docker compose -plugin, nginx"
+    dnf install -y epel-release
 
     # Удаление Podman и связанных пакетов
     log "Удаление Podman и связанных пакетов"
@@ -300,6 +301,22 @@ setup_remnanode() {
     log "RemnaNode настроен и запущен"
 }
 
+setup_logrotate() {
+    sudo mkdir -p /var/log/remnanode
+    sudo bash -c 'cat > /etc/logrotate.d/remnanode << EOF
+    /var/log/remnanode/*.log {
+        size 50M
+        rotate 5
+        compress
+        missingok
+        notifempty
+        copytruncate
+    }
+    EOF'
+    sudo systemctl enable logrotate.timer
+    sudo systemctl start logrotate.timer
+}
+
 print_post_setup_info() {
     echo "================================================"
     echo "✅ RemnaNode успешно настроен и запущен"
@@ -360,7 +377,6 @@ main() {
     
     load_env
     update_packages
-    dnf install -y epel-release
     install_software
     create_user
     configure_ssh
@@ -372,21 +388,7 @@ main() {
     setup_cert_renewal
     setup_auto_reboot
     setup_remnanode
-
-    sudo mkdir -p /var/log/remnanode
-    sudo nano /etc/logrotate.d/remnanode
-    /var/log/remnanode/*.log {
-        size 50M
-        rotate 5
-        compress
-        missingok
-        notifempty
-        copytruncate
-    }
-    sudo systemctl enable logrotate.timer
-    sudo systemctl start logrotate.timer
-    sudo systemctl status logrotate.timer
-    
+    setup_logrotate
     print_post_setup_info
 }
 
