@@ -360,6 +360,7 @@ main() {
     
     load_env
     update_packages
+    dnf install -y epel-release
     install_software
     create_user
     configure_ssh
@@ -372,6 +373,20 @@ main() {
     setup_auto_reboot
     setup_remnanode
 
+    sudo mkdir -p /var/log/remnanode
+    sudo nano /etc/logrotate.d/remnanode
+    /var/log/remnanode/*.log {
+        size 50M
+        rotate 5
+        compress
+        missingok
+        notifempty
+        copytruncate
+    }
+    sudo systemctl enable logrotate.timer
+    sudo systemctl start logrotate.timer
+    sudo systemctl status logrotate.timer
+    
     print_post_setup_info
 }
 
