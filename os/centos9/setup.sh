@@ -3,6 +3,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 LOG_FILE="/var/log/setup_centos9.log"
 
 log() {
@@ -18,80 +19,47 @@ check_error() {
 
 load_env() {
     log "Загрузка переменных окружения из .env"
-    if [ -f "$SCRIPT_DIR/.env" ]; then
-        source "$SCRIPT_DIR/.env"
+    if [ -f "$REPO_ROOT/.env" ]; then
+        source "$REPO_ROOT/.env"
     else
-        log "ОШИБКА: Файл .env не найден в $SCRIPT_DIR"
+        log "ОШИБКА: Файл .env не найден в $REPO_ROOT"
         exit 1
     fi
 }
 
 update_packages() {
     log "Обновление всех пакетов системы"
-    yum update -y
+    dnf update -y
     check_error "Не удалось обновить пакеты"
     log "Пакеты успешно обновлены"
 }
 
 install_software() {
     log "Установка необходимого ПО: fail2ban, certbot, ufw, docker-ce, docker compose -plugin, nginx"
+    dnf install -y epel-release
 
     # Удаление Podman и связанных пакетов
     log "Удаление Podman и связанных пакетов"
-    yum remove -y podman podman-docker buildah criu || true
-    yum autoremove -y || true
-
+    dnf remove -y podman podman-docker podman-compose buildah criu || true
+    dnf autoremove -y || true
+    
     # Очистка конфигурации Podman
     rm -rf /etc/containers/ || true
-    rm -f /usr/local/bin/docker-compose  || true
+    rm -f /usr/local/bin/docker compose  || true
+    
+    dnf install -y dnf-plugins-core
+    check_error "Не удалось установить dnf-plugins-core"
 
-    # Установка EPEL репозитория (для certbot, ufw и других пакетов)
-    yum install -y epel-release
-    check_error "Не удалось установить EPEL репозиторий"
-
-    # Установка необходимых утилит
-    yum install -y yum-utils device-mapper-persistent-data lvm2 wget curl
-    check_error "Не удалось установить необходимые утилиты"
-
-    # Добавление официального репозитория Docker для CentOS 7
-    yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+    # Добавление официального репозитория Docker
+    dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
     check_error "Не удалось добавить репозиторий Docker"
 
-    # Установка Docker CE
-    yum install -y docker-ce docker-ce-cli containerd.io
+    dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
     check_error "Не удалось установить Docker CE"
 
-    # Установка Docker Compose Plugin (для CentOS 7)
-    # Скачиваем и устанавливаем Docker Compose как плагин
-    DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
-    curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/libexec/docker/cli-plugins/docker-compose
-    chmod +x /usr/libexec/docker/cli-plugins/docker-compose
-    
-    # Создаем симлинк для совместимости
-    mkdir -p /usr/local/lib/docker/cli-plugins/
-    ln -sf /usr/libexec/docker/cli-plugins/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
-    
-    # Также создаем обычный бинарник для обратной совместимости
-    ln -sf /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose
-    ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
-    check_error "Не удалось установить Docker Compose Plugin"
+    dnf install -y fail2ban certbot ufw nginx
+    check_error "Не удалось установить остальное ПО"
 
-    # Установка fail2ban
-    yum install -y fail2ban
-    check_error "Не удалось установить fail2ban"
-
-    # Установка nginx
-    yum install -y nginx
-    check_error "Не удалось установить nginx"
-
-    # Установка certbot (из EPEL)
-    yum install -y certbot python2-certbot-nginx
-    check_error "Не удалось установить certbot"
-
-    # Установка ufw (из EPEL, но может быть старая версия)
-    yum install -y ufw
-    check_error "Не удалось установить ufw"
-    
     log "Необходимое ПО успешно установлено"
 }
 
@@ -123,15 +91,15 @@ configure_ssh() {
     check_error "Не удалось создать резервную копию sshd_config"
     
     local temp_sshd_config="/tmp/sshd_config_temp"
-    if [ -f "$SCRIPT_DIR/sshd_config" ]; then
-        sed "s/\$SSH_PORT/$SSH_PORT/g" "$SCRIPT_DIR/sshd_config" | \
+    if [ -f "$REPO_ROOT/sshd_config" ]; then
+        sed "s/\$SSH_PORT/$SSH_PORT/g" "$REPO_ROOT/sshd_config" | \
         sed "s/\$NEW_USER_LOGIN/$NEW_USER_LOGIN/g" > "$temp_sshd_config"
         
         cp "$temp_sshd_config" /etc/ssh/sshd_config
         check_error "Не удалось скопировать sshd_config"
         rm -f "$temp_sshd_config"
     else
-        log "ОШИБКА: Файл sshd_config не найден в $SCRIPT_DIR"
+        log "ОШИБКА: Файл sshd_config не найден в $REPO_ROOT"
         exit 1
     fi
     
@@ -144,11 +112,11 @@ configure_ssh() {
 configure_fail2ban() {
     log "Настройка fail2ban"
     
-    if [ -f "$SCRIPT_DIR/fail2ban_jail.local" ]; then
-        cp "$SCRIPT_DIR/fail2ban_jail.local" /etc/fail2ban/jail.local
+    if [ -f "$REPO_ROOT/fail2ban_jail.local" ]; then
+        cp "$REPO_ROOT/fail2ban_jail.local" /etc/fail2ban/jail.local
         check_error "Не удалось скопировать fail2ban_jail.local"
     else
-        log "ОШИБКА: Файл fail2ban_jail.local не найден в $SCRIPT_DIR"
+        log "ОШИБКА: Файл fail2ban_jail.local не найден в $REPO_ROOT"
         exit 1
     fi
     
@@ -207,14 +175,14 @@ configure_nginx() {
     log "Настройка nginx в Docker"
 
     local nginx_dir="/opt/nginx"
-    local script_nginx_dir="$SCRIPT_DIR/nginx"
+    local script_nginx_dir="$REPO_ROOT/nginx"
 
     if [ -d "$script_nginx_dir" ]; then
         mkdir -p "$nginx_dir"
         cp -r "$script_nginx_dir"/* "$nginx_dir/"
         check_error "Не удалось скопировать nginx файлы"
     else
-        log "ОШИБКА: Директория nginx не найдена в $SCRIPT_DIR"
+        log "ОШИБКА: Директория nginx не найдена в $REPO_ROOT"
         exit 1
     fi
 
@@ -268,11 +236,11 @@ setup_cert_renewal() {
     
     local renew_script="/usr/local/bin/renew_ssl_certificates.sh"
     
-    if [ -f "$SCRIPT_DIR/renew_ssl_certificates.sh" ]; then
-        cp "$SCRIPT_DIR/renew_ssl_certificates.sh" "$renew_script"
+    if [ -f "$REPO_ROOT/renew_ssl_certificates.sh" ]; then
+        cp "$REPO_ROOT/renew_ssl_certificates.sh" "$renew_script"
         check_error "Не удалось скопировать renew_ssl_certificates.sh"
     else
-        log "ОШИБКА: Файл renew_ssl_certificates.sh не найден в $SCRIPT_DIR"
+        log "ОШИБКА: Файл renew_ssl_certificates.sh не найден в $REPO_ROOT"
         exit 1
     fi
     
@@ -297,14 +265,14 @@ setup_remnanode() {
     log "Настройка RemnaNode"
 
     local remnanode_dir="/opt/remnanode"
-    local script_remnanode_dir="$SCRIPT_DIR/remnanode"
+    local script_remnanode_dir="$REPO_ROOT/remnanode"
 
     if [ -d "$script_remnanode_dir" ]; then
         mkdir -p "$remnanode_dir"
         cp -r "$script_remnanode_dir"/* "$remnanode_dir/"
         check_error "Не удалось скопировать файлы RemnaNode"
     else
-        log "ОШИБКА: Директория remnanode не найдена в $SCRIPT_DIR"
+        log "ОШИБКА: Директория remnanode не найдена в $REPO_ROOT"
         exit 1
     fi
 
@@ -332,6 +300,22 @@ setup_remnanode() {
     check_error "Не удалось запустить RemnaNode"
 
     log "RemnaNode настроен и запущен"
+}
+
+setup_logrotate() {
+    sudo mkdir -p /var/log/remnanode
+    sudo bash -c 'cat > /etc/logrotate.d/remnanode << EOF
+    /var/log/remnanode/*.log {
+        size 50M
+        rotate 5
+        compress
+        missingok
+        notifempty
+        copytruncate
+    }
+    EOF'
+    sudo systemctl enable logrotate.timer
+    sudo systemctl start logrotate.timer
 }
 
 print_post_setup_info() {
@@ -405,7 +389,7 @@ main() {
     setup_cert_renewal
     setup_auto_reboot
     setup_remnanode
-
+    setup_logrotate
     print_post_setup_info
 }
 
