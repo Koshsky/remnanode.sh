@@ -250,9 +250,9 @@ configure_nginx() {
 
 get_ssl_certificates() {
     log "Получение SSL сертификатов для домена $DOMAIN"
-    sudo mkdir -p /var/www/certbot
-    sudo chmod 755 /var/www/certbot
-    sudo chown -R $USER:$USER /var/www/certbot
+    mkdir -p /var/www/certbot
+    chmod 755 /var/www/certbot
+    chown -R $USER:$USER /var/www/certbot
 
     certbot certonly --standalone --non-interactive --agree-tos \
         --email $EMAIL \

@@ -61,7 +61,7 @@ install_software() {
     apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
     check_error "Не удалось установить Docker CE"
 
-    apt-get install -y fail2ban ufw certbot openssh-server
+    apt-get install -y fail2ban ufw certbot openssh-server sudo
     check_error "Не удалось установить остальное ПО"
 
     log "Необходимое ПО успешно установлено"
@@ -221,9 +221,9 @@ configure_nginx() {
 
 get_ssl_certificates() {
     log "Получение SSL сертификатов для домена $DOMAIN"
-    sudo mkdir -p /var/www/certbot
-    sudo chmod 755 /var/www/certbot
-    sudo chown -R $USER:$USER /var/www/certbot
+    mkdir -p /var/www/certbot
+    chmod 755 /var/www/certbot
+    chown -R $USER:$USER /var/www/certbot
 
     certbot certonly --standalone --non-interactive --agree-tos \
         --email $EMAIL \
@@ -307,8 +307,8 @@ setup_remnanode() {
 }
 
 setup_logrotate() {
-    sudo mkdir -p /var/log/remnanode
-    sudo bash -c 'cat > /etc/logrotate.d/remnanode << EOF
+    mkdir -p /var/log/remnanode
+    bash -c 'cat > /etc/logrotate.d/remnanode << EOF
     /var/log/remnanode/*.log {
         size 50M
         rotate 5
@@ -318,8 +318,8 @@ setup_logrotate() {
         copytruncate
     }
     EOF'
-    sudo systemctl enable logrotate.timer
-    sudo systemctl start logrotate.timer
+    systemctl enable logrotate.timer
+    systemctl start logrotate.timer
 }
 
 print_post_setup_info() {
