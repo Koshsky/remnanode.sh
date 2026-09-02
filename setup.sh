@@ -418,73 +418,59 @@ setup_logrotate() {
 }
 
 print_post_setup_info() {
-    echo "================================================"
-    echo "✅ RemnaNode успешно настроен и запущен"
-    echo "================================================"
-    echo ""
-    echo "📊 СТАТУС СЕРВИСОВ:"
-    echo "   • RemnaNode: $(docker ps --filter "name=remnanode" --format "table {{.Names}}\t{{.Status}}" | grep remnanode) 🟢"
-    echo "   • Nginx: $(docker ps --filter "name=nginx" --format "{{.Names}}\t{{.Status}}" | grep nginx) 🟢"
-    echo "   • Docker: $(systemctl is-active docker) 🟢"
-    echo "   • Xray: $(ss -tlnp | grep ':$XRAY_PORT ' | awk '{print $6}') 🟢"
-    echo "   • UFW: $(systemctl is-active ufw) 🟢"
-    echo ""
-    echo "🌐 СЕТЕВЫЕ НАСТРОЙКИ:"
-    echo "   • SSH порт: $SSH_PORT"
-    echo "   • RemnaNode порт: $REMNANODE_PORT"
-    echo "   • Xray порт: $XRAY_PORT"
-    echo "   • Внешний IP: $(curl -s --max-time 5 ifconfig.me)"
-    echo ""
-    echo "🔐 БЕЗОПАСНОСТЬ:"
-    echo "   • Пользователь: $NEW_USER_LOGIN"
-    echo "   • Пароль: не выводится (задается в .env, вход по SSH-ключу)"
-    echo "   • Аутентификация: Только SSH ключ"
-    echo "   • Root SSH: ❌ Запрещен"
-    echo "   • Парольная аутентификация: ❌ Отключена"
-    echo ""
-    echo "📂 ДИРЕКТОРИИ И ФАЙЛЫ:"
-    echo "   • RemnaNode: /opt/remnanode/"
-    echo "   • Zapret RUU GOV: /opt/remnawave/xray/share/zapret.dat"
-    echo "   • SSL ключи: /etc/letsencrypt/live/$DOMAIN/"
-    echo "   • Конфиг Nginx: /opt/nginx/nginx.conf"
-    echo "   • Логи Nginx: /var/log/nginx/ (VOLUME NOT MOUNTED!)"
-    echo "   • Логи RemnaNode: docker logs remnanode"
-    echo "   • Логи Xray: docker exec remnanode tail -f /var/log/supervisor/xray.out.log"
-    echo ""
-    echo "🔍 ПРОВЕРКА ДОСТУПНОСТИ:"
+    local rc=0
+    local ok="[OK]  "
+    local bad="[FAIL]"
 
-    if docker ps | grep -q remnanode; then
-        echo "   • RemnaNode контейнер: 🟢 Запущен"
+    echo "============================================="
+    echo "ИТОГ НАСТРОЙКИ Ubuntu 24 — $(date '+%Y-%m-%d %H:%M:%S')"
+    echo "============================================="
+
+    # --- Проверки: только реальные состояния ---
+    if docker ps --format '{{.Names}}' | grep -qx remnanode; then
+        echo "$ok RemnaNode (docker)      запущен"
     else
-        echo "   • RemnaNode контейнер: 🔴 Остановлен"
+        echo "$bad RemnaNode (docker)      не запущен"; rc=1
     fi
 
-    if docker ps | grep -q nginx; then
-        echo "   • Nginx: 🟢 Запущен"
+    if docker ps --format '{{.Names}}' | grep -qx nginx; then
+        echo "$ok nginx (docker)           запущен"
     else
-        echo "   • Nginx: 🔴 Не запущен"
+        echo "$bad nginx (docker)           не запущен"; rc=1
     fi
 
-    echo ""
-    echo "🧪 ПРОВЕРКА ЗДОРОВЬЯ:"
     local http_code
     http_code=$(curl -s --max-time 5 -o /dev/null -w '%{http_code}' "https://$DOMAIN/health" 2>/dev/null || true)
     if [ "$http_code" = "200" ]; then
-        echo "   • nginx /health (https://$DOMAIN/health): 🟢 200"
+        echo "$ok https://$DOMAIN/health   HTTP 200"
     else
-        echo "   • nginx /health (https://$DOMAIN/health): 🔴 $http_code"
+        echo "$bad https://$DOMAIN/health   HTTP ${http_code:-нет ответа}"; rc=1
+    fi
+
+    if ss -tln | grep -q ":$XRAY_PORT "; then
+        echo "$ok xray :$XRAY_PORT         слушает"
+    else
+        echo "$bad xray :$XRAY_PORT         не слушает"; rc=1
     fi
 
     if ss -tln | grep -q ":$REMNANODE_PORT "; then
-        echo "   • RemnaNode порт $REMNANODE_PORT: 🟢 слушает"
+        echo "$ok RemnaNode :$REMNANODE_PORT  слушает"
     else
-        echo "   • RemnaNode порт $REMNANODE_PORT: 🔴 не слушает"
+        echo "$bad RemnaNode :$REMNANODE_PORT  не слушает"; rc=1
     fi
 
-    echo ""
-    echo "================================================"
-    echo "🎉 Настройка Ubuntu 24 завершена успешно!"
-    echo "================================================"
+    # --- Конфигурация: одна компактная секция ---
+    echo "---"
+    echo "SSH:  user=$NEW_USER_LOGIN port=$SSH_PORT root=запрещён пароли=запрещены"
+    echo "SSL:  /etc/letsencrypt/live/$DOMAIN/"
+    echo "IP:   $(curl -s --max-time 5 ifconfig.me)"
+    echo "Dirs: /opt/nginx /opt/remnanode /opt/remnanode-monitor"
+    echo "Logs: /var/log/setup_ubuntu24.log /var/log/nginx /var/log/remnanode"
+    echo "Cron: cert-renew 03:00, zapret 02:00/14:00"
+    echo "systemd: docker=$(systemctl is-active docker 2>/dev/null || echo down) ufw=$(systemctl is-active ufw 2>/dev/null || echo down) fail2ban=$(systemctl is-active fail2ban 2>/dev/null || echo down)"
+    echo "============================================="
+
+    return $rc
 }
 
 # Основная функция
@@ -516,9 +502,13 @@ main() {
     setup_monitoring
     setup_logrotate
     restart_ssh
-    print_post_setup_info
-    touch "$DONE_MARKER"
-    log "Установка завершена (маркер: $DONE_MARKER)"
+    if print_post_setup_info; then
+        touch "$DONE_MARKER"
+        log "Настройка завершена успешно (маркер: $DONE_MARKER)"
+    else
+        log "Настройка завершена с ошибками проверок — маркер НЕ создан (FORCE=1 для повтора)"
+        exit 1
+    fi
 }
 
 # Запуск основной функции
