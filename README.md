@@ -52,7 +52,7 @@ cp .env.example .env      # заполнить все поля
 5. Получает SSL-сертификат (certbot standalone), поднимает nginx в Docker и RemnaNode.
 6. Настраивает cron: продление сертификатов (03:00), zapret.dat (02:00/14:00),
    опционально перезагрузку; включается unattended-upgrades.
-7. Устанавливает мониторинг (ежечасно) и logrotate; в конце — summary со статусами.
+7. Устанавливает мониторинг (ежечасно), Beszel-агент (если задан .env) и logrotate; в конце — summary со статусами.
 
 ## Мониторинг
 
@@ -76,5 +76,7 @@ sshd_config, fail2ban_jail.local   # шаблоны конфигов
 nginx/                       # nginx-стек (Docker): conf, compose, app
 remnanode/                   # RemnaNode: docker-compose (версия образа пиннится)
 renew_ssl_certificates.sh    # продление сертификатов (cron)
-monitor/monitor.sh           # статус-скрипт мониторинга
+monitor/monitor.sh           # локальная сигнализация (контейнеры/диск/load + Telegram)
+beszel/server/               # hub: веб-дашборд всего парка (docker compose)
+beszel/agent/                # агент-шаблон, ставится на каждом узле через setup.sh
 ```
