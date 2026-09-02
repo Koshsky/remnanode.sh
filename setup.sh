@@ -1,9 +1,9 @@
 #!/bin/bash
+# Target: Ubuntu 24.04 (noble) — единственная поддерживаемая ОС
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 LOG_FILE="/var/log/setup_ubuntu24.log"
 
 log() {
@@ -19,10 +19,10 @@ check_error() {
 
 load_env() {
     log "Загрузка переменных окружения из .env"
-    if [ -f "$REPO_ROOT/.env" ]; then
-        source "$REPO_ROOT/.env"
+    if [ -f "$SCRIPT_DIR/.env" ]; then
+        source "$SCRIPT_DIR/.env"
     else
-        log "ОШИБКА: Файл .env не найден в $REPO_ROOT"
+        log "ОШИБКА: Файл .env не найден в $SCRIPT_DIR"
         exit 1
     fi
 }
@@ -95,15 +95,15 @@ configure_ssh() {
     check_error "Не удалось создать резервную копию sshd_config"
     
     local temp_sshd_config="/tmp/sshd_config_temp"
-    if [ -f "$REPO_ROOT/sshd_config" ]; then
-        sed "s/\$SSH_PORT/$SSH_PORT/g" "$REPO_ROOT/sshd_config" | \
+    if [ -f "$SCRIPT_DIR/sshd_config" ]; then
+        sed "s/\$SSH_PORT/$SSH_PORT/g" "$SCRIPT_DIR/sshd_config" | \
         sed "s/\$NEW_USER_LOGIN/$NEW_USER_LOGIN/g" > "$temp_sshd_config"
         
         cp "$temp_sshd_config" /etc/ssh/sshd_config
         check_error "Не удалось скопировать sshd_config"
         rm -f "$temp_sshd_config"
     else
-        log "ОШИБКА: Файл sshd_config не найден в $REPO_ROOT"
+        log "ОШИБКА: Файл sshd_config не найден в $SCRIPT_DIR"
         exit 1
     fi
     
@@ -116,11 +116,11 @@ configure_ssh() {
 configure_fail2ban() {
     log "Настройка fail2ban"
     
-    if [ -f "$REPO_ROOT/fail2ban_jail.local" ]; then
-        cp "$REPO_ROOT/fail2ban_jail.local" /etc/fail2ban/jail.local
+    if [ -f "$SCRIPT_DIR/fail2ban_jail.local" ]; then
+        cp "$SCRIPT_DIR/fail2ban_jail.local" /etc/fail2ban/jail.local
         check_error "Не удалось скопировать fail2ban_jail.local"
     else
-        log "ОШИБКА: Файл fail2ban_jail.local не найден в $REPO_ROOT"
+        log "ОШИБКА: Файл fail2ban_jail.local не найден в $SCRIPT_DIR"
         exit 1
     fi
     
@@ -179,14 +179,14 @@ configure_nginx() {
     log "Настройка nginx в Docker"
 
     local nginx_dir="/opt/nginx"
-    local script_nginx_dir="$REPO_ROOT/nginx"
+    local script_nginx_dir="$SCRIPT_DIR/nginx"
 
     if [ -d "$script_nginx_dir" ]; then
         mkdir -p "$nginx_dir"
         cp -r "$script_nginx_dir"/* "$nginx_dir/"
         check_error "Не удалось скопировать nginx файлы"
     else
-        log "ОШИБКА: Директория nginx не найдена в $REPO_ROOT"
+        log "ОШИБКА: Директория nginx не найдена в $SCRIPT_DIR"
         exit 1
     fi
 
@@ -240,11 +240,11 @@ setup_cert_renewal() {
     
     local renew_script="/usr/local/bin/renew_ssl_certificates.sh"
     
-    if [ -f "$REPO_ROOT/renew_ssl_certificates.sh" ]; then
-        cp "$REPO_ROOT/renew_ssl_certificates.sh" "$renew_script"
+    if [ -f "$SCRIPT_DIR/renew_ssl_certificates.sh" ]; then
+        cp "$SCRIPT_DIR/renew_ssl_certificates.sh" "$renew_script"
         check_error "Не удалось скопировать renew_ssl_certificates.sh"
     else
-        log "ОШИБКА: Файл renew_ssl_certificates.sh не найден в $REPO_ROOT"
+        log "ОШИБКА: Файл renew_ssl_certificates.sh не найден в $SCRIPT_DIR"
         exit 1
     fi
     
@@ -269,14 +269,14 @@ setup_remnanode() {
     log "Настройка RemnaNode"
 
     local remnanode_dir="/opt/remnanode"
-    local script_remnanode_dir="$REPO_ROOT/remnanode"
+    local script_remnanode_dir="$SCRIPT_DIR/remnanode"
 
     if [ -d "$script_remnanode_dir" ]; then
         mkdir -p "$remnanode_dir"
         cp -r "$script_remnanode_dir"/* "$remnanode_dir/"
         check_error "Не удалось скопировать файлы RemnaNode"
     else
-        log "ОШИБКА: Директория remnanode не найдена в $REPO_ROOT"
+        log "ОШИБКА: Директория remnanode не найдена в $SCRIPT_DIR"
         exit 1
     fi
 
