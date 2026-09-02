@@ -7,6 +7,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_FILE="/var/log/setup_ubuntu24.log"
+DONE_MARKER="/var/log/setup_ubuntu24.done"
 
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
@@ -486,6 +487,12 @@ main() {
     log "Начало настройки Ubuntu 24"
     export DEBIAN_FRONTEND=noninteractive
 
+    if [ -f "$DONE_MARKER" ] && [ "${FORCE:-}" != "1" ]; then
+        log "ОШИБКА: Установка уже была выполнена ранее (маркер $DONE_MARKER)."
+        log "Для повторного запуска: FORCE=1 ./setup.sh"
+        exit 1
+    fi
+
     load_env
     preflight_check
     update_packages
@@ -505,6 +512,8 @@ main() {
     setup_logrotate
     restart_ssh
     print_post_setup_info
+    touch "$DONE_MARKER"
+    log "Установка завершена (маркер: $DONE_MARKER)"
 }
 
 # Запуск основной функции
