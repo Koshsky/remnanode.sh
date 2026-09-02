@@ -1,5 +1,7 @@
 #!/bin/bash
 # Target: Ubuntu 24.04 (noble) — единственная поддерживаемая ОС
+# ВНИМАНИЕ: в конце скрипта перезапускается ssh — это может оборвать текущее
+# SSH-соединение. Запускайте скрипт через tmux/screen или с консоли сервера.
 
 set -e
 
@@ -135,10 +137,24 @@ configure_ssh() {
         exit 1
     fi
     
-    systemctl restart ssh
-    check_error "Не удалось перезапустить SSH службу"
+    log "Установка SSH-ключа для пользователя $NEW_USER_LOGIN"
+    local user_home
+    user_home="$(getent passwd "$NEW_USER_LOGIN" | cut -d: -f6)"
+    mkdir -p "$user_home/.ssh"
+    chmod 700 "$user_home/.ssh"
+    echo "$SSH_PUBLIC_KEY" > "$user_home/.ssh/authorized_keys"
+    chmod 600 "$user_home/.ssh/authorized_keys"
+    chown -R "$NEW_USER_LOGIN:$NEW_USER_LOGIN" "$user_home/.ssh"
+    check_error "Не удалось установить SSH-ключ для $NEW_USER_LOGIN"
     
     log "SSH настроен. Порт изменен на $SSH_PORT, запрещен вход root и аутентификация по паролю"
+}
+
+restart_ssh() {
+    log "Перезапуск SSH для применения настроек"
+    systemctl restart ssh
+    check_error "Не удалось перезапустить SSH службу"
+    log "SSH перезапущен (рестарт в конце установки, чтобы не оставить сервер без доступа)"
 }
 
 configure_fail2ban() {
@@ -424,6 +440,7 @@ main() {
     setup_auto_reboot
     setup_remnanode
     setup_logrotate
+    restart_ssh
     print_post_setup_info
 }
 
