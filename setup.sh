@@ -12,11 +12,9 @@ log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
 }
 
-check_error() {
-    if [ $? -ne 0 ]; then
-        log "ОШИБКА: $1"
-        exit 1
-    fi
+fail() {
+    log "ОШИБКА: $1"
+    exit 1
 }
 
 load_env() {
@@ -60,8 +58,7 @@ preflight_check() {
 update_packages() {
     log "Обновление всех пакетов системы"
     apt-get update -y
-    DEBIAN_FRONTEND=noninteractive apt-get full-upgrade -y
-    check_error "Не удалось обновить пакеты"
+    DEBIAN_FRONTEND=noninteractive apt-get full-upgrade -y || fail "Не удалось обновить пакеты"
     log "Пакеты успешно обновлены"
 }
 
@@ -77,22 +74,18 @@ install_software() {
     # Очистка конфигурации Podman
     rm -rf /etc/containers/ || true
 
-    apt-get install -y ca-certificates curl wget gnupg apt-transport-https cron
-    check_error "Не удалось установить базовые утилиты"
+    apt-get install -y ca-certificates curl wget gnupg apt-transport-https cron || fail "Не удалось установить базовые утилиты"
 
     # Добавление официального репозитория Docker
     install -m 0755 -d /etc/apt/keyrings
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     chmod a+r /etc/apt/keyrings/docker.gpg
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu noble stable" > /etc/apt/sources.list.d/docker.list
-    apt-get update -y
-    check_error "Не удалось обновить списки пакетов после добавления репозитория Docker"
+    apt-get update -y || fail "Не удалось обновить списки пакетов после добавления репозитория Docker"
 
-    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-    check_error "Не удалось установить Docker CE"
+    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin || fail "Не удалось установить Docker CE"
 
-    apt-get install -y fail2ban ufw certbot openssh-server sudo
-    check_error "Не удалось установить остальное ПО"
+    apt-get install -y fail2ban ufw certbot openssh-server sudo || fail "Не удалось установить остальное ПО"
 
     log "Необходимое ПО успешно установлено"
 }
@@ -103,17 +96,14 @@ create_user() {
     if id "$NEW_USER_LOGIN" &>/dev/null; then
         log "Пользователь $NEW_USER_LOGIN уже существует"
     else
-        useradd -m -s /bin/bash "$NEW_USER_LOGIN"
-        check_error "Не удалось создать пользователя $NEW_USER_LOGIN"
+        useradd -m -s /bin/bash "$NEW_USER_LOGIN" || fail "Не удалось создать пользователя $NEW_USER_LOGIN"
         
-        echo "$NEW_USER_LOGIN:$NEW_USER_PASSWORD" | chpasswd
-        check_error "Не удалось установить пароль для пользователя $NEW_USER_LOGIN"
+        echo "$NEW_USER_LOGIN:$NEW_USER_PASSWORD" | chpasswd || fail "Не удалось установить пароль для пользователя $NEW_USER_LOGIN"
         
         log "Пользователь $NEW_USER_LOGIN создан"
     fi
     
-    usermod -aG sudo "$NEW_USER_LOGIN"
-    check_error "Не удалось добавить пользователя $NEW_USER_LOGIN в группу sudo"
+    usermod -aG sudo "$NEW_USER_LOGIN" || fail "Не удалось добавить пользователя $NEW_USER_LOGIN в группу sudo"
     
     log "Пользователь $NEW_USER_LOGIN добавлен в группы sudo и docker"
 }
@@ -121,16 +111,14 @@ create_user() {
 configure_ssh() {
     log "Настройка SSH"
     
-    cp /etc/ssh/sshd_config /etc/ssh/sshd_config.backup
-    check_error "Не удалось создать резервную копию sshd_config"
+    cp /etc/ssh/sshd_config /etc/ssh/sshd_config.backup || fail "Не удалось создать резервную копию sshd_config"
     
     local temp_sshd_config="/tmp/sshd_config_temp"
     if [ -f "$SCRIPT_DIR/sshd_config" ]; then
         sed "s/\$SSH_PORT/$SSH_PORT/g" "$SCRIPT_DIR/sshd_config" | \
         sed "s/\$NEW_USER_LOGIN/$NEW_USER_LOGIN/g" > "$temp_sshd_config"
         
-        cp "$temp_sshd_config" /etc/ssh/sshd_config
-        check_error "Не удалось скопировать sshd_config"
+        cp "$temp_sshd_config" /etc/ssh/sshd_config || fail "Не удалось скопировать sshd_config"
         rm -f "$temp_sshd_config"
     else
         log "ОШИБКА: Файл sshd_config не найден в $SCRIPT_DIR"
@@ -144,16 +132,14 @@ configure_ssh() {
     chmod 700 "$user_home/.ssh"
     echo "$SSH_PUBLIC_KEY" > "$user_home/.ssh/authorized_keys"
     chmod 600 "$user_home/.ssh/authorized_keys"
-    chown -R "$NEW_USER_LOGIN:$NEW_USER_LOGIN" "$user_home/.ssh"
-    check_error "Не удалось установить SSH-ключ для $NEW_USER_LOGIN"
+    chown -R "$NEW_USER_LOGIN:$NEW_USER_LOGIN" "$user_home/.ssh" || fail "Не удалось установить SSH-ключ для $NEW_USER_LOGIN"
     
     log "SSH настроен. Порт изменен на $SSH_PORT, запрещен вход root и аутентификация по паролю"
 }
 
 restart_ssh() {
     log "Перезапуск SSH для применения настроек"
-    systemctl restart ssh
-    check_error "Не удалось перезапустить SSH службу"
+    systemctl restart ssh || fail "Не удалось перезапустить SSH службу"
     log "SSH перезапущен (рестарт в конце установки, чтобы не оставить сервер без доступа)"
 }
 
@@ -161,8 +147,7 @@ configure_fail2ban() {
     log "Настройка fail2ban"
     
     if [ -f "$SCRIPT_DIR/fail2ban_jail.local" ]; then
-        cp "$SCRIPT_DIR/fail2ban_jail.local" /etc/fail2ban/jail.local
-        check_error "Не удалось скопировать fail2ban_jail.local"
+        cp "$SCRIPT_DIR/fail2ban_jail.local" /etc/fail2ban/jail.local || fail "Не удалось скопировать fail2ban_jail.local"
     else
         log "ОШИБКА: Файл fail2ban_jail.local не найден в $SCRIPT_DIR"
         exit 1
@@ -170,9 +155,8 @@ configure_fail2ban() {
     
     sed -i "s/port    = ssh/port    = $SSH_PORT/g" /etc/fail2ban/jail.local
     
-    systemctl enable fail2ban
-    systemctl start fail2ban
-    check_error "Не удалось запустить fail2ban"
+    systemctl enable fail2ban || fail "Не удалось включить fail2ban"
+    systemctl start fail2ban || fail "Не удалось запустить fail2ban"
     
     log "fail2ban настроен и запущен"
 }
@@ -183,17 +167,16 @@ configure_ufw() {
     systemctl enable ufw
     systemctl start ufw
     
-    ufw --force reset
+    ufw --force reset || fail "Не удалось сбросить правила UFW"
     
-    ufw default deny incoming
-    ufw default allow outgoing
+    ufw default deny incoming || fail "Не удалось задать default deny incoming"
+    ufw default allow outgoing || fail "Не удалось задать default allow outgoing"
     
-    ufw allow "$SSH_PORT"
-    ufw allow "$XRAY_PORT"
-    ufw allow "$REMNANODE_PORT"
-    ufw allow 80
-    echo "y" | ufw enable
-    check_error "Не удалось включить UFW"
+    ufw allow "$SSH_PORT" || fail "Не удалось разрешить порт $SSH_PORT"
+    ufw allow "$XRAY_PORT" || fail "Не удалось разрешить порт $XRAY_PORT"
+    ufw allow "$REMNANODE_PORT" || fail "Не удалось разрешить порт $REMNANODE_PORT"
+    ufw allow 80 || fail "Не удалось разрешить порт 80"
+    echo "y" | ufw enable || fail "Не удалось включить UFW"
     
     log "UFW настроен. Разрешены порты: 80, $SSH_PORT, $XRAY_PORT, $REMNANODE_PORT"
 }
@@ -201,20 +184,17 @@ configure_ufw() {
 configure_docker() {
     log "Настройка Docker"
     
-    systemctl enable docker
-    systemctl start docker
-    check_error "Не удалось запустить Docker"
+    systemctl enable docker || fail "Не удалось включить автозапуск Docker"
+    systemctl start docker || fail "Не удалось запустить Docker"
     
-    docker --version
-    check_error "Docker не работает корректно"
+    docker --version || fail "Docker не работает корректно"
     
     if ! getent group docker > /dev/null; then
         groupadd docker
         log "Группа docker создана"
     fi
     
-    usermod -aG docker "$NEW_USER_LOGIN"
-    check_error "Не удалось добавить пользователя $NEW_USER_LOGIN в группу docker"
+    usermod -aG docker "$NEW_USER_LOGIN" || fail "Не удалось добавить пользователя $NEW_USER_LOGIN в группу docker"
     
     log "Docker CE настроен и запущен, пользователь $NEW_USER_LOGIN добавлен в группу docker"
 }
@@ -227,8 +207,7 @@ configure_nginx() {
 
     if [ -d "$script_nginx_dir" ]; then
         mkdir -p "$nginx_dir"
-        cp -r "$script_nginx_dir"/* "$nginx_dir/"
-        check_error "Не удалось скопировать nginx файлы"
+        cp -r "$script_nginx_dir"/* "$nginx_dir/" || fail "Не удалось скопировать nginx файлы"
     else
         log "ОШИБКА: Директория nginx не найдена в $SCRIPT_DIR"
         exit 1
@@ -241,15 +220,13 @@ configure_nginx() {
 
     sed -i -e "s/\$DOMAIN/$DOMAIN/g" \
            "$nginx_dir/nginx.conf" \
-           "$nginx_dir/docker-compose.yml"
-    check_error "Не удалось настроить конфигурационные файлы"
+           "$nginx_dir/docker-compose.yml" || fail "Не удалось настроить конфигурационные файлы"
 
     mkdir -p /dev/shm/nginx
     chmod 755 /dev/shm/nginx
 
     cd "$nginx_dir"
-    docker compose up -d
-    check_error "Не удалось запустить nginx в Docker"
+    docker compose up -d || fail "Не удалось запустить nginx в Docker"
 
     sleep 3
     if docker compose ps | grep -q "Up"; then
@@ -273,9 +250,7 @@ get_ssl_certificates() {
         --email $EMAIL \
         -d $DOMAIN \
         --http-01-port 80 \
-        --cert-name $DOMAIN
-
-    check_error "Не удалось получить SSL сертификаты для $DOMAIN"
+        --cert-name $DOMAIN || fail "Не удалось получить SSL сертификаты для $DOMAIN"
     log "SSL сертификаты для $DOMAIN успешно получены"
 }
 
@@ -285,8 +260,7 @@ setup_cert_renewal() {
     local renew_script="/usr/local/bin/renew_ssl_certificates.sh"
     
     if [ -f "$SCRIPT_DIR/renew_ssl_certificates.sh" ]; then
-        cp "$SCRIPT_DIR/renew_ssl_certificates.sh" "$renew_script"
-        check_error "Не удалось скопировать renew_ssl_certificates.sh"
+        cp "$SCRIPT_DIR/renew_ssl_certificates.sh" "$renew_script" || fail "Не удалось скопировать renew_ssl_certificates.sh"
     else
         log "ОШИБКА: Файл renew_ssl_certificates.sh не найден в $SCRIPT_DIR"
         exit 1
@@ -294,8 +268,7 @@ setup_cert_renewal() {
     
     chmod +x "$renew_script"
     
-    (crontab -l 2>/dev/null | grep -v "$renew_script"; echo "0 3 * * * $renew_script") | crontab -
-    check_error "Не удалось добавить задание в cron для обновления сертификатов"
+    (crontab -l 2>/dev/null | grep -v "$renew_script"; echo "0 3 * * * $renew_script") | crontab - || fail "Не удалось добавить задание в cron для обновления сертификатов"
     
     log "Скрипт обновления сертификатов настроен и добавлен в cron (ежедневно в 3:00)"
 }
@@ -315,8 +288,7 @@ setup_auto_reboot() {
 
     log "Настройка автоматической перезагрузки ($mode) в 5:00"
     
-    (crontab -l 2>/dev/null | grep -v "reboot"; echo "$reboot_schedule /sbin/reboot") | crontab -
-    check_error "Не удалось добавить задание перезагрузки в cron"
+    (crontab -l 2>/dev/null | grep -v "reboot"; echo "$reboot_schedule /sbin/reboot") | crontab - || fail "Не удалось добавить задание перезагрузки в cron"
     
     log "Автоматическая перезагрузка настроена ($mode, 5:00)"
 }
@@ -329,8 +301,7 @@ setup_remnanode() {
 
     if [ -d "$script_remnanode_dir" ]; then
         mkdir -p "$remnanode_dir"
-        cp -r "$script_remnanode_dir"/* "$remnanode_dir/"
-        check_error "Не удалось скопировать файлы RemnaNode"
+        cp -r "$script_remnanode_dir"/* "$remnanode_dir/" || fail "Не удалось скопировать файлы RemnaNode"
     else
         log "ОШИБКА: Директория remnanode не найдена в $SCRIPT_DIR"
         exit 1
@@ -356,8 +327,7 @@ setup_remnanode() {
     log "Настроено обновление томов Zapret RU GOV дважды в день."
     log "Том расположен по пути: /opt/remnawave/xray/share/zapret.dat"
 
-    docker compose up -d
-    check_error "Не удалось запустить RemnaNode"
+    docker compose up -d || fail "Не удалось запустить RemnaNode"
 
     log "RemnaNode настроен и запущен"
 }
