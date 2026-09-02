@@ -354,6 +354,47 @@ setup_remnanode() {
     log "RemnaNode настроен и запущен"
 }
 
+setup_beszel() {
+    if [ -z "${BESZEL_HUB_URL:-}" ]; then
+        log "Beszel не настроен (BESZEL_HUB_URL пуст в .env) — агент не устанавливается"
+        return 0
+    fi
+    if [ -z "${BESZEL_AGENT_KEY:-}" ] || [ -z "${BESZEL_TOKEN:-}" ]; then
+        log "ОШИБКА: BESZEL_HUB_URL задан, но BESZEL_AGENT_KEY/BESZEL_TOKEN пусты"
+        log "Ключ и токен выдаёт Web-UI hub'а: Add System -> скопировать в .env узла"
+        exit 1
+    fi
+
+    log "Установка Beszel-агента (hub: $BESZEL_HUB_URL)"
+
+    local agent_dir="/opt/beszel-agent"
+    if [ ! -f "$SCRIPT_DIR/beszel/agent/docker-compose.yml" ]; then
+        log "ОШИБКА: beszel/agent/docker-compose.yml не найден в $SCRIPT_DIR"
+        exit 1
+    fi
+    mkdir -p "$agent_dir"
+    cp "$SCRIPT_DIR/beszel/agent/docker-compose.yml" "$agent_dir/docker-compose.yml" || fail "Не удалось скопировать beszel-agent compose"
+
+    # envsubst — безопасно для спецсимволов в ключах и токенах
+    BESZEL_AGENT_KEY="$BESZEL_AGENT_KEY" BESZEL_HUB_URL="$BESZEL_HUB_URL" \
+        BESZEL_TOKEN="$BESZEL_TOKEN" BESZEL_AGENT_PORT="${BESZEL_AGENT_PORT:-45876}" \
+        envsubst '$BESZEL_AGENT_KEY $BESZEL_HUB_URL $BESZEL_TOKEN $BESZEL_AGENT_PORT' \
+        < "$agent_dir/docker-compose.yml" > "$agent_dir/docker-compose.yml.tmp" &&
+        mv "$agent_dir/docker-compose.yml.tmp" "$agent_dir/docker-compose.yml" || fail "Не удалось подставить переменные beszel-agent"
+
+    cd "$agent_dir"
+    docker compose up -d || fail "Не удалось запустить Beszel-агента"
+
+    sleep 3
+    if docker compose ps | grep -q "Up"; then
+        log "Beszel-агент запущен (hub: $BESZEL_HUB_URL)"
+    else
+        log "ОШИБКА: Beszel-агент не запустился"
+        docker compose logs
+        exit 1
+    fi
+}
+
 setup_monitoring() {
     log "Установка мониторинга (monitor.sh + systemd timer)"
 
@@ -499,6 +540,7 @@ main() {
     setup_cert_renewal
     setup_auto_reboot
     setup_remnanode
+    setup_beszel
     setup_monitoring
     setup_logrotate
     restart_ssh
