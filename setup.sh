@@ -27,6 +27,34 @@ load_env() {
     fi
 }
 
+preflight_check() {
+    log "Проверка обязательных переменных .env"
+
+    local required_vars="NEW_USER_LOGIN NEW_USER_PASSWORD EMAIL REMNAWAVE_SECRET_KEY SSH_PUBLIC_KEY"
+    local var
+    for var in $required_vars; do
+        if [ -z "${!var}" ]; then
+            log "ОШИБКА: Переменная $var не задана в .env"
+            exit 1
+        fi
+    done
+
+    if [ -z "$DOMAIN" ] || [ "$DOMAIN" = "CHANGE-ME" ]; then
+        log "ОШИБКА: Переменная DOMAIN должна содержать реальный домен (не CHANGE-ME)"
+        exit 1
+    fi
+
+    local port_var
+    for port_var in SSH_PORT XRAY_PORT REMNANODE_PORT; do
+        if ! [[ "${!port_var}" =~ ^[0-9]+$ ]] || [ "${!port_var}" -lt 1 ] || [ "${!port_var}" -gt 65535 ]; then
+            log "ОШИБКА: Переменная $port_var должна быть числом от 1 до 65535"
+            exit 1
+        fi
+    done
+
+    log "Проверка .env пройдена"
+}
+
 update_packages() {
     log "Обновление всех пакетов системы"
     apt-get update -y
@@ -382,6 +410,7 @@ main() {
     export DEBIAN_FRONTEND=noninteractive
 
     load_env
+    preflight_check
     update_packages
     install_software
     create_user
