@@ -45,7 +45,7 @@ cp .env.example .env      # заполнить все поля
 
 ## Что делает скрипт
 
-1. Проверяет `.env` (preflight) и обновляет систему (`apt full-upgrade`).
+1. Устанавливает hostname из `DOMAIN` (напр. `node-01.example.com` → `node-01`), проверяет `.env` (preflight) и обновляет систему (`apt full-upgrade`).
 2. Ставит: базовые утилиты, Docker CE (+ compose plugin, без podman), fail2ban,
    ufw, certbot, openssh-server, sudo, unattended-upgrades.
 3. Создаёт пользователя, кладёт ваш SSH-ключ в `authorized_keys`, настраивает sshd

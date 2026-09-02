@@ -56,6 +56,23 @@ preflight_check() {
     log "Проверка .env пройдена"
 }
 
+setup_hostname() {
+    local hostname="${DOMAIN%%.*}"
+    if [ -z "$hostname" ]; then
+        fail "Не удалось вывести hostname из DOMAIN ($DOMAIN)"
+    fi
+
+    log "Установка hostname: $hostname (из $DOMAIN)"
+    hostnamectl set-hostname "$hostname" || fail "Не удалось установить hostname $hostname"
+
+    # Ubuntu-соглашение: 127.0.1.1 hostname в /etc/hosts (иначе "Unable to resolve host")
+    if ! grep -q "127.0.1.1[[:space:]]\+$hostname" /etc/hosts; then
+        sed -i "1i 127.0.1.1 $hostname" /etc/hosts || true
+    fi
+
+    log "Hostname установлен: $hostname (hostname -f: $(hostname -f 2>/dev/null || echo n/a))"
+}
+
 update_packages() {
     log "Обновление всех пакетов системы"
     apt-get update -y
@@ -480,6 +497,7 @@ main() {
 
     load_env
     preflight_check
+    setup_hostname
     update_packages
     install_software
     setup_unattended_upgrades
