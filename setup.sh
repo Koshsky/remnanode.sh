@@ -460,6 +460,22 @@ print_post_setup_info() {
     fi
 
     echo ""
+    echo "🧪 ПРОВЕРКА ЗДОРОВЬЯ:"
+    local http_code
+    http_code=$(curl -s --max-time 5 -o /dev/null -w '%{http_code}' "https://$DOMAIN/health" 2>/dev/null || true)
+    if [ "$http_code" = "200" ]; then
+        echo "   • nginx /health (https://$DOMAIN/health): 🟢 200"
+    else
+        echo "   • nginx /health (https://$DOMAIN/health): 🔴 $http_code"
+    fi
+
+    if ss -tln | grep -q ":$REMNANODE_PORT "; then
+        echo "   • RemnaNode порт $REMNANODE_PORT: 🟢 слушает"
+    else
+        echo "   • RemnaNode порт $REMNANODE_PORT: 🔴 не слушает"
+    fi
+
+    echo ""
     echo "================================================"
     echo "🎉 Настройка Ubuntu 24 завершена успешно!"
     echo "================================================"
