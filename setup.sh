@@ -74,7 +74,7 @@ install_software() {
     # Очистка конфигурации Podman
     rm -rf /etc/containers/ || true
 
-    apt-get install -y ca-certificates curl wget gnupg apt-transport-https cron || fail "Не удалось установить базовые утилиты"
+    apt-get install -y ca-certificates curl wget gnupg apt-transport-https cron gettext-base || fail "Не удалось установить базовые утилиты"
 
     # Добавление официального репозитория Docker
     install -m 0755 -d /etc/apt/keyrings
@@ -308,9 +308,10 @@ setup_remnanode() {
     fi
 
     if [ -f "$remnanode_dir/docker-compose.yml" ]; then
-        # Заменяем переменные в docker-compose.yml
-        sed -i "s/\$REMNANODE_PORT/$REMNANODE_PORT/g" "$remnanode_dir/docker-compose.yml"
-        sed -i "s/\$REMNAWAVE_SECRET_KEY/$REMNAWAVE_SECRET_KEY/g" "$remnanode_dir/docker-compose.yml"
+        # Заменяем переменные через envsubst — безопасно для спецсимволов в SECRET_KEY
+        REMNANODE_PORT="$REMNANODE_PORT" REMNAWAVE_SECRET_KEY="$REMNAWAVE_SECRET_KEY" \
+            envsubst '$REMNANODE_PORT $REMNAWAVE_SECRET_KEY' < "$remnanode_dir/docker-compose.yml" > "$remnanode_dir/docker-compose.yml.tmp" &&
+            mv "$remnanode_dir/docker-compose.yml.tmp" "$remnanode_dir/docker-compose.yml" || fail "Не удалось обновить docker-compose.yml"
         
         log "docker-compose.yml обновлен с актуальными переменными"
     else
