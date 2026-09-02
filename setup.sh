@@ -78,7 +78,7 @@ install_software() {
 
     # Добавление официального репозитория Docker
     install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    curl -fsSL --max-time 30 https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     chmod a+r /etc/apt/keyrings/docker.gpg
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu noble stable" > /etc/apt/sources.list.d/docker.list
     apt-get update -y || fail "Не удалось обновить списки пакетов после добавления репозитория Docker"
@@ -324,7 +324,7 @@ setup_remnanode() {
     cd "$remnanode_dir"
 
     # Добавить задачу, сохраняя существующие
-    (crontab -l 2>/dev/null | grep -v 'zapret.dat'; echo "0 2,14 * * * wget -O /opt/remnawave/xray/share/zapret.dat https://github.com/kutovoys/ru_gov_zapret/releases/latest/download/zapret.dat") | crontab -
+    (crontab -l 2>/dev/null | grep -v 'zapret.dat'; echo "0 2,14 * * * wget -q --timeout=30 -T 30 -O /opt/remnawave/xray/share/zapret.dat https://github.com/kutovoys/ru_gov_zapret/releases/latest/download/zapret.dat") | crontab -
     log "Настроено обновление томов Zapret RU GOV дважды в день."
     log "Том расположен по пути: /opt/remnawave/xray/share/zapret.dat"
 
@@ -365,7 +365,7 @@ print_post_setup_info() {
     echo "   • SSH порт: $SSH_PORT"
     echo "   • RemnaNode порт: $REMNANODE_PORT"
     echo "   • Xray порт: $XRAY_PORT"
-    echo "   • Внешний IP: $(curl -s ifconfig.me)"
+    echo "   • Внешний IP: $(curl -s --max-time 5 ifconfig.me)"
     echo ""
     echo "🔐 БЕЗОПАСНОСТЬ:"
     echo "   • Пользователь: $NEW_USER_LOGIN"
