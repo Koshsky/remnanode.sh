@@ -386,7 +386,7 @@ print_post_setup_info() {
     echo ""
     echo "🔐 БЕЗОПАСНОСТЬ:"
     echo "   • Пользователь: $NEW_USER_LOGIN"
-    echo "   • Пароль: $NEW_USER_PASSWORD"
+    echo "   • Пароль: не выводится (задается в .env, вход по SSH-ключу)"
     echo "   • Аутентификация: Только SSH ключ"
     echo "   • Root SSH: ❌ Запрещен"
     echo "   • Парольная аутентификация: ❌ Отключена"
