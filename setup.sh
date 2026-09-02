@@ -348,6 +348,53 @@ setup_remnanode() {
     log "RemnaNode настроен и запущен"
 }
 
+setup_monitoring() {
+    log "Установка мониторинга (monitor.sh + systemd timer)"
+
+    local monitor_dir="/opt/remnanode-monitor"
+    if [ ! -f "$SCRIPT_DIR/monitor/monitor.sh" ]; then
+        log "ОШИБКА: monitor/monitor.sh не найден в $SCRIPT_DIR"
+        exit 1
+    fi
+    mkdir -p "$monitor_dir"
+    cp "$SCRIPT_DIR/monitor/monitor.sh" "$monitor_dir/monitor.sh" || fail "Не удалось скопировать monitor.sh"
+    chmod +x "$monitor_dir/monitor.sh"
+
+    # В .env мониторинга — только TELEGRAM-переменные, без остальных секретов репозитория
+    : > "$monitor_dir/.env"
+    [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && echo "TELEGRAM_BOT_TOKEN=\"$TELEGRAM_BOT_TOKEN\"" >> "$monitor_dir/.env"
+    [ -n "${TELEGRAM_CHAT_ID:-}" ] && echo "TELEGRAM_CHAT_ID=\"$TELEGRAM_CHAT_ID\"" >> "$monitor_dir/.env"
+
+    cat > /etc/systemd/system/remnanode-monitor.service << 'EOF'
+[Unit]
+Description=RemnaNode health monitor
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/remnanode-monitor/monitor.sh
+EOF
+
+    cat > /etc/systemd/system/remnanode-monitor.timer << 'EOF'
+[Unit]
+Description=Run RemnaNode monitor hourly
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+    systemctl daemon-reload || fail "Не удалось перечитать systemd"
+    systemctl enable remnanode-monitor.timer || fail "Не удалось включить timer мониторинга"
+    systemctl start remnanode-monitor.timer || fail "Не удалось запустить timer мониторинга"
+    "$monitor_dir/monitor.sh" || true
+
+    log "Мониторинг настроен: $monitor_dir/monitor.sh (ежечасно)"
+}
+
 setup_logrotate() {
     mkdir -p /var/log/remnanode
     bash -c 'cat > /etc/logrotate.d/remnanode << EOF
@@ -438,6 +485,7 @@ main() {
     setup_cert_renewal
     setup_auto_reboot
     setup_remnanode
+    setup_monitoring
     setup_logrotate
     restart_ssh
     print_post_setup_info
