@@ -340,9 +340,9 @@ setup_remnanode() {
     cd "$remnanode_dir"
 
     # Добавить задачу, сохраняя существующие
-    (crontab -l 2>/dev/null; echo "0 2,14 * * * wget -O /opt/remnanode/xray/share/zapret.dat https://github.com/kutovoys/ru_gov_zapret/releases/latest/download/zapret.dat") | crontab -
+    (crontab -l 2>/dev/null | grep -v 'zapret.dat'; echo "0 2,14 * * * wget -O /opt/remnawave/xray/share/zapret.dat https://github.com/kutovoys/ru_gov_zapret/releases/latest/download/zapret.dat") | crontab -
     log "Настроено обновление томов Zapret RU GOV дважды в день."
-    log "Том расположен по пути: /opt/remnanode/xray/share/zapret.dat"
+    log "Том расположен по пути: /opt/remnawave/xray/share/zapret.dat"
 
     docker compose up -d
     check_error "Не удалось запустить RemnaNode"
@@ -393,7 +393,7 @@ print_post_setup_info() {
     echo ""
     echo "📂 ДИРЕКТОРИИ И ФАЙЛЫ:"
     echo "   • RemnaNode: /opt/remnanode/"
-    echo "   • Zapret RUU GOV: /opt/remnanode/xray/share/zapret.dat"
+    echo "   • Zapret RUU GOV: /opt/remnawave/xray/share/zapret.dat"
     echo "   • SSL ключи: /etc/letsencrypt/live/$DOMAIN/"
     echo "   • Конфиг Nginx: /opt/nginx/nginx.conf"
     echo "   • Логи Nginx: /var/log/nginx/ (VOLUME NOT MOUNTED!)"
