@@ -37,7 +37,7 @@ cp .env.example .env      # заполнить все поля
 | `REMNANODE_PORT` | нет | Порт RemnaNode, по умолчанию 8443 |
 | `AUTO_REBOOT` | нет | `daily`, `weekly` или пусто (выкл) — авто-перезагрузка в 5:00 |
 | `TELEGRAM_BOT_TOKEN` | нет | Токен бота для уведомлений мониторинга |
-| `TELEGRAM_CHAT_ID` | нет | Chat id для уведомлений мониторинга |
+| `TELEGRAM_USER_ID` | нет | Числовой Telegram user id получателя (перед настройкой напишите боту `/start`) |
 
 Пустые обязательные поля скрипт не пропустит — упадёт на preflight до любых изменений системы.
 
@@ -58,7 +58,7 @@ cp .env.example .env      # заполнить все поля
 
 - Скрипт: `/opt/remnanode-monitor/monitor.sh`, запуск — systemd timer `remnanode-monitor.timer` (ежечасно).
 - Проверяет: контейнеры nginx/remnanode, диск (>90%), load, и пишет в `/var/log/remnanode_monitor.log`.
-- Уведомления Telegram — только если заданы `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`.
+- Уведомления Telegram — только если заданы `TELEGRAM_BOT_TOKEN` и `TELEGRAM_USER_ID`.
 
 ## Логи и артефакты
 

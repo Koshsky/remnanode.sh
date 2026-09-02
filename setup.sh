@@ -369,7 +369,7 @@ setup_monitoring() {
     # В .env мониторинга — только TELEGRAM-переменные, без остальных секретов репозитория
     : > "$monitor_dir/.env"
     [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && echo "TELEGRAM_BOT_TOKEN=\"$TELEGRAM_BOT_TOKEN\"" >> "$monitor_dir/.env"
-    [ -n "${TELEGRAM_CHAT_ID:-}" ] && echo "TELEGRAM_CHAT_ID=\"$TELEGRAM_CHAT_ID\"" >> "$monitor_dir/.env"
+    [ -n "${TELEGRAM_USER_ID:-}" ] && echo "TELEGRAM_USER_ID=\"$TELEGRAM_USER_ID\"" >> "$monitor_dir/.env"
 
     cat > /etc/systemd/system/remnanode-monitor.service << 'EOF'
 [Unit]

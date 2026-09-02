@@ -2,7 +2,7 @@
 # Минимальный мониторинг RemnaNode: статус контейнеров, диск, load, fail2ban.
 # Устанавливается в /opt/remnanode-monitor/ и запускается systemd timer'ом (ежечасно).
 # Telegram-уведомления — только если в /opt/remnanode-monitor/.env заданы
-# TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID.
+# TELEGRAM_BOT_TOKEN и TELEGRAM_USER_ID.
 
 set -e
 
@@ -48,12 +48,12 @@ check_load() {
 }
 
 notify_telegram() {
-    if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
+    if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_USER_ID:-}" ]; then
         return 0
     fi
     curl -s --max-time 10 -X POST \
         "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-        -d "chat_id=${TELEGRAM_CHAT_ID}" \
+        -d "chat_id=${TELEGRAM_USER_ID}" \
         --data-urlencode "text=$1" > /dev/null || true
 }
 
