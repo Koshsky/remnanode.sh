@@ -85,9 +85,24 @@ install_software() {
 
     apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin || fail "Не удалось установить Docker CE"
 
-    apt-get install -y fail2ban ufw certbot openssh-server sudo || fail "Не удалось установить остальное ПО"
+    apt-get install -y fail2ban ufw certbot openssh-server sudo unattended-upgrades || fail "Не удалось установить остальное ПО"
 
     log "Необходимое ПО успешно установлено"
+}
+
+setup_unattended_upgrades() {
+    log "Настройка автоматических обновлений безопасности (unattended-upgrades)"
+
+    cat > /etc/apt/apt.conf.d/20auto-upgrades << 'EOF'
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+APT::Periodic::AutocleanInterval "7";
+EOF
+
+    systemctl enable apt-daily.timer apt-daily-upgrade.timer || true
+    systemctl start apt-daily-upgrade.timer || true
+
+    log "Автоматические обновления безопасности включены (перезагрузкой управляет AUTO_REBOOT)"
 }
 
 create_user() {
@@ -412,6 +427,7 @@ main() {
     preflight_check
     update_packages
     install_software
+    setup_unattended_upgrades
     create_user
     configure_ssh
     configure_fail2ban
