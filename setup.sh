@@ -241,12 +241,17 @@ configure_nginx() {
     mkdir -p /dev/shm/nginx
     chmod 755 /dev/shm/nginx
 
+    # Логи nginx-контейнера для fail2ban (nginx-http-auth / nginx-limit-req)
+    mkdir -p /var/log/nginx
+    touch /var/log/nginx/error.log /var/log/nginx/access.log
+
     cd "$nginx_dir"
     docker compose up -d || fail "Не удалось запустить nginx в Docker"
 
     sleep 3
     if docker compose ps | grep -q "Up"; then
         log "nginx успешно запущен в Docker"
+        fail2ban-client reload 2>/dev/null || true
     else
         log "ОШИБКА: nginx не запустился"
         docker compose logs

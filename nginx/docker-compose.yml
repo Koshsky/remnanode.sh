@@ -9,5 +9,6 @@ services:
       - ./app:/var/www/html:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/www/certbot:/var/www/certbot:ro
+      - /var/log/nginx:/var/log/nginx
       - /dev/shm:/dev/shm
     command: sh -c 'rm -f /dev/shm/nginx.sock && nginx -g "daemon off;"'
