@@ -301,12 +301,24 @@ setup_cert_renewal() {
 }
 
 setup_auto_reboot() {
-    log "Настройка автоматической перезагрузки в 5:00"
+    local mode="${AUTO_REBOOT:-}"
+    local reboot_schedule=""
+
+    case "$mode" in
+        daily)   reboot_schedule="0 5 * * *" ;;
+        weekly)  reboot_schedule="0 5 * * 0" ;;
+        "")      log "Автоперезагрузка отключена (AUTO_REBOOT не задан в .env)"
+                 return 0 ;;
+        *)       log "ОШИБКА: AUTO_REBOOT должен быть daily, weekly или пустым (сейчас: $mode)"
+                 exit 1 ;;
+    esac
+
+    log "Настройка автоматической перезагрузки ($mode) в 5:00"
     
-    (crontab -l 2>/dev/null | grep -v "reboot"; echo "0 5 * * * /sbin/reboot") | crontab -
+    (crontab -l 2>/dev/null | grep -v "reboot"; echo "$reboot_schedule /sbin/reboot") | crontab -
     check_error "Не удалось добавить задание перезагрузки в cron"
     
-    log "Автоматическая перезагрузка настроена на 5:00 ежедневно"
+    log "Автоматическая перезагрузка настроена ($mode, 5:00)"
 }
 
 setup_remnanode() {
