@@ -61,11 +61,11 @@
     - maintenance
   post_tasks:
     - name: Healthcheck — RemnaNode слушает порт {{ REMNANODE_PORT }}
-      ansible.builtin.shell: "ss -tln | grep -q ' :{{ REMNANODE_PORT }} '"
+      ansible.builtin.shell: "ss -tln | grep -q ':{{ REMNANODE_PORT }} '"
       changed_when: false
 
     - name: Healthcheck — xray слушает порт {{ XRAY_PORT }}
-      ansible.builtin.shell: "ss -tln | grep -q ' :{{ XRAY_PORT }} '"
+      ansible.builtin.shell: "ss -tln | grep -q ':{{ XRAY_PORT }} '"
       changed_when: false
 
     - name: Healthcheck — контейнеры nginx и remnanode запущены
