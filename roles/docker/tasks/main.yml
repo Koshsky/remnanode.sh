@@ -8,7 +8,7 @@
     mode: "0755"
 
 - name: GPG-ключ репозитория Docker (dearmor)
-  ansible.builtin.command:
+  ansible.builtin.shell:
     cmd: curl -fsSL --max-time 30 https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     creates: /etc/apt/keyrings/docker.gpg
 
