@@ -49,7 +49,7 @@
           - (XRAY_PORT | default('')) is match('^[0-9]+$')
           - (REMNANODE_PORT | default('')) is match('^[0-9]+$')
           - (BESZEL_AGENT_PORT | default('')) is match('^[0-9]+$')
-        fail_msg: "Заполните обязательные переменные в group_vars/all/vars.yml (в т.ч. DOMAIN_ZONE для автоподстановки DOMAIN); порты — числа"
+        fail_msg: "Заполните обязательные переменные в inventory/group_vars/all/vars.yml (в т.ч. DOMAIN_ZONE для автоподстановки DOMAIN); порты — числа"
   roles:
     - base
     - security

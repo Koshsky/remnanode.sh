@@ -31,18 +31,18 @@ ansible-galaxy collection install -r requirements.yml
 
 ```bash
 cp inventory/hosts.example.ini inventory/hosts.ini   # реальные IP (файл gitignored)
-cp group_vars/all/vars.yml.template group_vars/all/vars.yml   # заполнить (gitignored)
+cp inventory/group_vars/all/vars.yml.template inventory/group_vars/all/vars.yml   # заполнить (gitignored)
 ```
 
-### Переменные (group_vars/all/vars.yml)
+### Переменные (inventory/group_vars/all/vars.yml)
 
 | Переменная | Обязательная | Описание |
 |---|---|---|
 | `NEW_USER_LOGIN` / `NEW_USER_PASSWORD` | да | Пользователь (sudo) и его пароль |
 | `EMAIL` | да | Почта для certbot |
 | `REMNAWAVE_SECRET_KEY` | да | Секрет RemnaWave |
-| `DOMAIN_ZONE` | да | Зона по умолчанию: `DOMAIN = <hostname>.<DOMAIN_ZONE>`; для нод с другим доменом — `host_vars/<host>.yml` (`DOMAIN`/`DOMAIN_ZONE` перекроет) |
-| `DOMAIN` | — | Вычисляется автоматически; переопределяется в `host_vars/<host>.yml` |
+| `DOMAIN_ZONE` | да | Зона по умолчанию: `DOMAIN = <hostname>.<DOMAIN_ZONE>`; для нод с другим доменом — `inventory/host_vars/<host>.yml` (`DOMAIN`/`DOMAIN_ZONE` перекроет) |
+| `DOMAIN` | — | Вычисляется автоматически; переопределяется в `inventory/host_vars/<host>.yml` |
 | `SSH_PORT` | нет | Порт SSH, по умолчанию 222 |
 | `XRAY_PORT` / `REMNANODE_PORT` | нет | Порт Xray (443) / RemnaNode (8443) |
 | `AUTO_REBOOT` | нет | `daily`, `weekly` или пусто (выкл) — авто-перезагрузка в 5:00 |
@@ -69,8 +69,8 @@ ansible-playbook -i inventory/hosts.ini playbooks/provision.yml
 ### Домены / разные доменные зоны
 
 - Парк в одной зоне: задаётся только `DOMAIN_ZONE`, `DOMAIN` вычисляется (`<hostname>.<DOMAIN_ZONE>`).
-- Узлы в разных зонах или с кастомными доменами: `host_vars/<host>.yml`
-  (файлы gitignored, пример — `host_vars/node-01.example.yml`):
+- Узлы в разных зонах или с кастомными доменами: `inventory/host_vars/<host>.yml`
+  (файлы gitignored, пример — `inventory/host_vars/node-01.example.yml`):
   ```yaml
   DOMAIN: "custom-node.example.org"        # полный домен
   # или другая зона с hostname-шаблоном:
@@ -106,11 +106,11 @@ ansible-playbook -i inventory/hosts.ini playbooks/provision.yml
 
 ### Секреты (ansible-vault)
 
-`group_vars/all/vars.yml` и `keys/` gitignored, но лежат на диске открытым текстом.
+`inventory/group_vars/all/vars.yml` и `keys/` gitignored, но лежат на диске открытым текстом.
 Для продакшена рекомендуется зашифровать секреты:
 
 ```bash
-ansible-vault encrypt group_vars/all/vars.yml       # пароль спросит при запуске
+ansible-vault encrypt inventory/group_vars/all/vars.yml       # пароль спросит при запуске
 ansible-playbook ... --ask-vault-pass
 # либо переменные окружения: ANSIBLE_VAULT_PASSWORD_FILE=...
 ```
@@ -124,7 +124,7 @@ Hub Beszel разворачивается **отдельно на своём VPS
 
 ```text
 1. В Web-UI hub'а: Add System → скопировать KEY/TOKEN
-2. Вписать BESZEL_HUB_URL / BESZEL_AGENT_KEY / BESZEL_TOKEN в group_vars/all/vars.yml
+2. Вписать BESZEL_HUB_URL / BESZEL_AGENT_KEY / BESZEL_TOKEN в inventory/group_vars/all/vars.yml
 3. Проиграть provision.yml — агент зарегистрируется сам
 ```
 
@@ -133,7 +133,7 @@ Hub Beszel разворачивается **отдельно на своём VPS
 ```
 ansible.cfg, requirements.yml
 inventory/                   # hosts.example.ini (шаблон), hosts.ini (gitignored)
-group_vars/all/vars.yml.template
+inventory/group_vars/all/vars.yml.template
 playbooks/provision.yml      # полная настройка ноды
 playbooks/ops/rekey.yml      # перевыпуск ключей
 keys/                        # gitignored: сгенерированные ключи по хостам
