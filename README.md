@@ -69,7 +69,7 @@ ansible-playbook -i inventory/hosts.ini playbooks/provision.yml
 2. Пакеты: Docker CE (+ compose plugin), fail2ban, ufw, certbot, openssh-server, sudo, unattended-upgrades.
 3. Пользователь + SSH-ключи (root и user) → sshd (свой порт, root-пароль и пароли запрещены).
 4. fail2ban (sshd, nginx-http-auth, nginx-limit-req) и UFW (default deny).
-5. SSL (certbot standalone на свободном 80) → nginx в Docker → RemnaNode (образ пинится 3.4.1).
+5. SSL (certbot standalone на свободном 80) → nginx в Docker → RemnaNode (образ пинится 2.7.0).
 6. Cron: продление сертификатов (03:00), zapret.dat (02:00/14:00), опц. перезагрузка; logrotate.
 7. Beszel-агент (если задан) + опциональное UFW-правило для SSH-режима.
 
