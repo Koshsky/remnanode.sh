@@ -75,14 +75,15 @@ ansible-playbook -i inventory/hosts.ini playbooks/provision.yml
 
 ## Мониторинг (Beszel)
 
-Hub — отдельная машина (`beszel/server/`, см. ниже). Новая нода добавляется через
-инвентарь и `.env`-переменные, конфиг hub не правится.
+Hub Beszel разворачивается **отдельно на своём VPS** (вне этого репозитория — образ
+`henrygd/beszel`, UI на порту 8090). В этом репо — только **агент** (`roles/beszel`):
+он пушит метрики на hub. Новая нода добавляется через инвентарь и `BESZEL_*`
+переменные, конфиг hub не правится.
 
-```bash
-# hub на отдельном VPS:
-cd beszel/server && cp .env.example .env && docker compose up -d
-# UI: http://IP:8090 → Add System → KEY/TOKEN → в group_vars/all/vars.yml →
-# проиграть provision.yml
+```text
+1. В Web-UI hub'а: Add System → скопировать KEY/TOKEN
+2. Вписать BESZEL_HUB_URL / BESZEL_AGENT_KEY / BESZEL_TOKEN в group_vars/all/vars.yml
+3. Проиграть provision.yml — агент зарегистрируется сам
 ```
 
 ## Структура
@@ -103,7 +104,6 @@ roles/
   remnanode/     compose.j2 + zapret cron
   beszel/        агент (compose.j2) + UFW-правило
   maintenance/   cron (renew/reboot), logrotate
-beszel/server/   hub-композ (разворачивается отдельно на VPS)
 ```
 
 ## Устранение неполадок
