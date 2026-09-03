@@ -1,0 +1,34 @@
+---
+# Диагностика нод и очистка от «призрачных» nginx-контейнеров.
+# Запуск: ansible-playbook -i inventory/hosts.ini playbooks/ops/cleanup.yml
+# Удаление контейнера (если нужно): ... -e cleanup_remove_nginx=true
+- name: Диагностика/очистка нод
+  hosts: remnanodes
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Статус nginx-контейнера
+      ansible.builtin.shell: "docker ps -a --filter name=nginx --format '{{ .Names }}\t{{ .Status }}'"
+      register: nginx_stat
+      changed_when: false
+      ignore_errors: true
+
+    - name: Факт — контейнер nginx найден
+      ansible.builtin.debug:
+        var: nginx_stat.stdout_lines
+
+    - name: Удалить nginx-контейнер (если cleanup_remove_nginx)
+      ansible.builtin.shell: "docker rm -f nginx"
+      when:
+        - cleanup_remove_nginx | default(false)
+        - nginx_stat.stdout | length > 0
+      ignore_errors: true
+
+    - name: Каталог сертификатов letsencrypt
+      ansible.builtin.shell: "ls -la /etc/letsencrypt/live/ 2>/dev/null || echo 'каталога нет'"
+      register: cert_list
+      changed_when: false
+
+    - name: Факт — сертификаты
+      ansible.builtin.debug:
+        var: cert_list.stdout_lines
