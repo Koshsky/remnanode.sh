@@ -21,6 +21,7 @@
 - name: apt update (после добавления репозитория Docker)
   ansible.builtin.apt:
     update_cache: true
+    lock_timeout: 900
 
 - name: Установка Docker CE
   ansible.builtin.apt:
@@ -31,6 +32,7 @@
       - docker-buildx-plugin
       - docker-compose-plugin
     state: present
+    lock_timeout: 900
 
 - name: docker — включить и запустить
   ansible.builtin.service:

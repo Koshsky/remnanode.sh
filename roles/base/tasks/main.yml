@@ -19,10 +19,16 @@
     insertbefore: EOF
   when: inventory_hostname != 'localhost'
 
+- name: "Дождаться завершения чужих apt-процессов (dpkg lock: unattended-upgrades и т.п.)"
+  ansible.builtin.shell: |
+    timeout 900 bash -c 'until ! fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 && ! fuser /var/lib/dpkg/lock >/dev/null 2>&1; do sleep 5; done'
+  changed_when: false
+
 - name: apt update
   ansible.builtin.apt:
     update_cache: true
     cache_valid_time: 3600
+    lock_timeout: 900
 
 # Ручной прогон playbook = осознанное полное обновление системы (включая ядра из -updates).
 # Автоматический режим — только security (unattended-upgrades, см. 20auto-upgrades/99-оверрайд).
@@ -30,6 +36,7 @@
   ansible.builtin.apt:
     upgrade: full
     update_cache: true
+    lock_timeout: 900
 
 - name: Базовые пакеты
   ansible.builtin.apt:
@@ -49,6 +56,7 @@
       - certbot
       - python3
     state: present
+    lock_timeout: 900
 
 - name: "unattended-upgrades — конфиг (флаг из vars: 1 — вкл, 0 — выкл)"
   ansible.builtin.template:
