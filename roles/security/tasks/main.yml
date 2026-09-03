@@ -38,7 +38,7 @@
 
 - name: IP контрольной машины (из SSH_CONNECTION) — не банить провижининг
   ansible.builtin.set_fact:
-    control_ip: "{{ (ansible_env.SSH_CONNECTION | default('')).split(' ')[0] | default('') }}"
+    control_ip: "{{ (ansible_facts['env']['SSH_CONNECTION'] | default('')).split(' ')[0] | default('') }}"
 
 - name: fail2ban jail.local
   ansible.builtin.template:
