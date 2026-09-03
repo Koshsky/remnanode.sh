@@ -54,8 +54,7 @@
     - base
     - security
     - docker
-    - certbot
-    - nginx
+    - caddy
     - remnanode
     - beszel
     - maintenance

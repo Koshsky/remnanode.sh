@@ -53,7 +53,6 @@
       - unattended-upgrades
       - fail2ban
       - ufw
-      - certbot
       - python3
     state: present
     lock_timeout: 900
