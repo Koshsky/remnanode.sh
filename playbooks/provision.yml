@@ -15,21 +15,21 @@
       ansible.builtin.file:
         path: "keys/{{ item }}"
         state: directory
-      loop: "{{ groups['remnanodes'] }}"
+      loop: "{{ groups['remnanodes'] | default([]) }}"
 
     - name: Генерация ключевой пары (не перезаписывает существующую)
       community.crypto.openssh_keypair:
         path: "keys/{{ item }}/id_ed25519"
         type: ed25519
         comment: "ansible-remnanode-{{ item }}"
-      loop: "{{ groups['remnanodes'] }}"
+      loop: "{{ groups['remnanodes'] | default([]) }}"
 
     - name: Добавить хосты с путём к приватному ключу
       ansible.builtin.add_host:
         name: "{{ item }}"
         groups: provision
         ansible_ssh_private_key_file: "keys/{{ item }}/id_ed25519"
-      loop: "{{ groups['remnanodes'] }}"
+      loop: "{{ groups['remnanodes'] | default([]) }}"
 
 - name: Настройка remnanode
   hosts: provision
@@ -45,7 +45,11 @@
           - REMNAWAVE_SECRET_KEY | default('') | length > 0
           - DOMAIN_ZONE | default('') | length > 0
           - DOMAIN | default('') | length > 0
-        fail_msg: "Заполните обязательные переменные в group_vars/all/vars.yml (в т.ч. DOMAIN_ZONE для автоподстановки DOMAIN)"
+          - (SSH_PORT | default('')) is match('^[0-9]+$')
+          - (XRAY_PORT | default('')) is match('^[0-9]+$')
+          - (REMNANODE_PORT | default('')) is match('^[0-9]+$')
+          - (BESZEL_AGENT_PORT | default('')) is match('^[0-9]+$')
+        fail_msg: "Заполните обязательные переменные в group_vars/all/vars.yml (в т.ч. DOMAIN_ZONE для автоподстановки DOMAIN); порты — числа"
   roles:
     - base
     - security
