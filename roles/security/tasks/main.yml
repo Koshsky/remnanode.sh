@@ -1,0 +1,74 @@
+---
+# Безопасность: пользователь, SSH-ключи (root+user), sshd, fail2ban, UFW.
+
+- name: Создание пользователя
+  ansible.builtin.user:
+    name: "{{ NEW_USER_LOGIN }}"
+    groups: sudo
+    append: true
+    shell: /bin/bash
+    create_home: true
+
+- name: Пароль пользователя
+  ansible.builtin.command:
+    cmd: "echo '{{ NEW_USER_LOGIN }}:{{ NEW_USER_PASSWORD }}' | chpasswd"
+  no_log: true
+
+- name: SSH-ключ пользователю (authorized_keys)
+  ansible.builtin.authorized_key:
+    user: "{{ NEW_USER_LOGIN }}"
+    key: "{{ lookup('file', 'keys/' ~ inventory_hostname ~ '/id_ed25519.pub') }}"
+    state: present
+
+- name: SSH-ключ root — для повторных запусков Ansible по ключу
+  ansible.builtin.authorized_key:
+    user: root
+    key: "{{ lookup('file', 'keys/' ~ inventory_hostname ~ '/id_ed25519.pub') }}"
+    state: present
+
+- name: sshd_config из шаблона
+  ansible.builtin.template:
+    src: sshd_config.j2
+    dest: /etc/ssh/sshd_config
+    backup: true
+    mode: "0644"
+  notify: restart ssh
+
+- name: fail2ban jail.local
+  ansible.builtin.template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    mode: "0644"
+  notify: reload fail2ban
+
+- name: fail2ban — включить и запустить
+  ansible.builtin.service:
+    name: fail2ban
+    enabled: true
+    state: started
+
+# --- UFW ---
+- name: UFW — default deny incoming
+  community.general.ufw:
+    direction: incoming
+    default: deny
+
+- name: UFW — default allow outgoing
+  community.general.ufw:
+    direction: outgoing
+    default: allow
+
+- name: UFW — разрешить порты (SSH, Xray, RemnaNode, HTTP)
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - "{{ SSH_PORT }}"
+    - "{{ XRAY_PORT }}"
+    - "{{ REMNANODE_PORT }}"
+    - "80"
+
+- name: UFW — включить
+  community.general.ufw:
+    state: enabled

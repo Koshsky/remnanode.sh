@@ -1,0 +1,27 @@
+# /etc/fail2ban/jail.local
+
+[DEFAULT]
+bantime = 3600
+findtime = 600
+maxretry = 3
+backend = auto
+
+[sshd]
+enabled = true
+port    = {{ SSH_PORT }}
+logpath = %(sshd_log)s
+maxretry = 3
+
+[nginx-http-auth]
+enabled = true
+logpath = /var/log/nginx/error.log
+maxretry = 3
+findtime = 600
+bantime = 3600
+
+[nginx-limit-req]
+enabled = true
+logpath = /var/log/nginx/error.log
+maxretry = 3
+findtime = 600
+bantime = 3600

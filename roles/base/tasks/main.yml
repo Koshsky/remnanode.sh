@@ -1,0 +1,59 @@
+---
+# Базовая настройка: hostname, обновления, пакеты, unattended-upgrades.
+
+- name: Установка hostname из имени хоста инвентаря (node-01)
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+  when: inventory_hostname != 'localhost'
+
+- name: /etc/hosts — 127.0.1.1 (Ubuntu-соглашение, иначе "Unable to resolve host")
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "127.0.1.1 {{ inventory_hostname }}"
+    insertbefore: EOF
+  when: inventory_hostname != 'localhost'
+
+- name: apt update
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Полное обновление системы
+  ansible.builtin.apt:
+    upgrade: full
+    update_cache: true
+
+- name: Базовые пакеты
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - wget
+      - gnupg
+      - apt-transport-https
+      - cron
+      - gettext-base
+      - openssh-server
+      - sudo
+      - unattended-upgrades
+      - fail2ban
+      - ufw
+      - certbot
+      - python3
+    state: present
+
+- name: unattended-upgrades — конфиг
+  ansible.builtin.copy:
+    src: 20auto-upgrades
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    mode: "0644"
+
+- name: Включить таймеры автоматических обновлений
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - apt-daily.timer
+    - apt-daily-upgrade.timer
+  ignore_errors: true
