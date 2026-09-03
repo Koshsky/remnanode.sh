@@ -1,0 +1,25 @@
+# Скопировать в group_vars/all/vars.yml (файл в .gitignore) и заполнить.
+# hostname ноды берётся из имени хоста в инвентаре;
+# DOMAIN = <hostname>.<DOMAIN_ZONE> (можно переопределить через host_vars).
+
+# --- обязательные ---
+NEW_USER_LOGIN: user
+NEW_USER_PASSWORD: ""
+EMAIL: you@example.com
+REMNAWAVE_SECRET_KEY: ""
+
+# --- сеть / домен ---
+DOMAIN_ZONE: example.com            # node-01.example.com
+SSH_PORT: 222
+XRAY_PORT: 443
+REMNANODE_PORT: 8443
+
+# --- опции ---
+AUTO_REBOOT: ""                    # daily | weekly | "" (выкл)
+
+# Beszel-агент (если HUB_URL пуст — агент не ставится)
+BESZEL_HUB_URL: "https://dashboard.example.com"
+BESZEL_AGENT_KEY: ""               # из Web-UI hub'а (Add System)
+BESZEL_TOKEN: ""
+BESZEL_AGENT_PORT: 45876
+BESZEL_ALLOW_FROM: ""              # IP/подсеть hub'а — открыть 45876 в UFW (SSH-режим)

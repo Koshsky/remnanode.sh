@@ -1,2 +1,6 @@
 .env
 .dsh-project-memory/
+inventory/hosts.ini
+group_vars/all/vars.yml
+keys/
+*.retry
