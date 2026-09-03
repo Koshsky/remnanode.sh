@@ -1,5 +1,3 @@
 ---
 - name: restart caddy container
-  community.docker.docker_compose_v2:
-    project_src: /opt/caddy
-    state: restarted
+  ansible.builtin.shell: "docker restart caddy"

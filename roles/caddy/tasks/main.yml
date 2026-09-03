@@ -1,6 +1,11 @@
 ---
 # Caddy на узле: landing-страница и /health за xray (unix-сокет, PROXY protocol),
 # сертификаты Caddy выпускает сам (ACME). Заменяет nginx + certbot + renew-cron.
+#
+# Контейнер управляется через docker run (без docker compose): на этих хостах
+# compose v2 стабильно падал в "container name already in use" на собственном
+# пересоздании (баговое поведение с host-network/created-state), docker run —
+# детерминировано.
 
 - name: Каталог /opt/caddy
   ansible.builtin.file:
@@ -12,20 +17,17 @@
   ansible.builtin.shell: "docker rm -f nginx 2>/dev/null; rm -f /dev/shm/nginx.sock 2>/dev/null; true"
   changed_when: false
 
-- name: Полный сброс compose-проекта caddy перед подъёмом (чистое состояние)
-  ansible.builtin.shell: "cd /opt/caddy && docker compose down --remove-orphans 2>/dev/null; docker rm -f caddy caddy-1 2>/dev/null; true"
+- name: Убрать любые предыдущие контейнеры проекта caddy (compose-осколки и docker run)
+  ansible.builtin.shell: |
+    docker rm -f caddy 2>/dev/null
+    docker rm -f $(docker ps -aq --filter label=com.docker.compose.project=caddy 2>/dev/null) 2>/dev/null
+    true
   changed_when: false
 
 - name: Статика приложения
   ansible.builtin.copy:
     src: app/
     dest: /opt/caddy/app/
-    mode: "0644"
-
-- name: docker-compose
-  ansible.builtin.copy:
-    src: docker-compose.yml
-    dest: /opt/caddy/docker-compose.yml
     mode: "0644"
 
 - name: Caddyfile из шаблона ({{ DOMAIN }})
@@ -35,7 +37,16 @@
     mode: "0644"
   notify: restart caddy container
 
-- name: caddy контейнер (docker compose up)
-  community.docker.docker_compose_v2:
-    project_src: /opt/caddy
-    state: present
+- name: Поднять контейнер caddy (docker run)
+  ansible.builtin.shell: |
+    if ! docker ps -q --filter name=^/caddy$ >/dev/null; then
+      docker run -d --name caddy --restart unless-stopped --network host \
+        -v /opt/caddy/Caddyfile:/etc/caddy/Caddyfile:ro \
+        -v /opt/caddy/app:/var/www/html:ro \
+        -v /opt/caddy/caddy_data:/data \
+        -v /opt/caddy/caddy_config:/config \
+        -v /dev/shm:/dev/shm \
+        caddy:2-alpine
+    fi
+  register: caddy_run
+  changed_when: caddy_run.stdout | length > 0
