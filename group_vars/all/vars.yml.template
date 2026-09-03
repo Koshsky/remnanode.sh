@@ -10,6 +10,7 @@ REMNAWAVE_SECRET_KEY: ""
 
 # --- сеть / домен ---
 DOMAIN_ZONE: example.com            # node-01.example.com
+DOMAIN: "{{ inventory_hostname }}.{{ DOMAIN_ZONE }}"   # auto: node-01.example.com
 SSH_PORT: 222
 XRAY_PORT: 443
 REMNANODE_PORT: 8443

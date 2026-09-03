@@ -44,7 +44,8 @@
           - EMAIL | default('') | length > 0
           - REMNAWAVE_SECRET_KEY | default('') | length > 0
           - DOMAIN_ZONE | default('') | length > 0
-        fail_msg: "Заполните обязательные переменные в group_vars/all/vars.yml"
+          - DOMAIN | default('') | length > 0
+        fail_msg: "Заполните обязательные переменные в group_vars/all/vars.yml (в т.ч. DOMAIN_ZONE для автоподстановки DOMAIN)"
   roles:
     - base
     - security
