@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пряжа-Мир - Интернет-магазин пряжи для вязания</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <h1>🧶 Пряжа-Мир</h1>
+                <p>Интернет-магазин качественной пряжи</p>
+            </div>
+            <nav class="nav">
+                <a href="#">Главная</a>
+                <a href="#">Каталог</a>
+                <a href="#">Акции</a>
+                <a href="#">Доставка</a>
+                <a href="#">Контакты</a>
+            </nav>
+        </header>
+
+        <main class="main-content">
+            <div class="banner">
+                <h2>Скоро открытие!</h2>
+                <p>Мы готовим для вас лучшую коллекцию пряжи со всего мира</p>
+            </div>
+
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">🏷️</div>
+                    <h3>Доступные цены</h3>
+                    <p>Пряжа от производителей без наценок</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">🚚</div>
+                    <h3>Быстрая доставка</h3>
+                    <p>Доставка по всей России от 2 дней</p>
+                </div>
+                
+                <div class="feature">
+                    <div class="feature-icon">🎨</div>
+                    <h3>Богатый выбор</h3>
+                    <p>Более 500 цветов и текстур</p>
+                </div>
+            </div>
+
+            <div class="categories">
+                <h2>Категории товаров</h2>
+                <div class="category-grid">
+                    <div class="category">Шерстяная пряжа</div>
+                    <div class="category">Хлопковая пряжа</div>
+                    <div class="category">Акриловая пряжа</div>
+                    <div class="category">Мохер</div>
+                    <div class="category">Альпака</div>
+                    <div class="category">Меланжевая пряжа</div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="contact-info">
+                    <h4>Контакты</h4>
+                    <p>📞 8-800-555-35-35</p>
+                    <p>✉️ info@priazha-mir.ru</p>
+                    <p>🕒 Пн-Пт: 9:00-18:00</p>
+                </div>
+                <div class="copyright">
+                    <p>&copy; 2024 ООО "Пряжа-Мир". Все права защищены.</p>
+                    <p>ИНН: 1234567890, ОГРН: 1234567890123</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Простой счетчик обратного отсчета до "открытия"
+        function updateCountdown() {
+            const openingDate = new Date('2024-12-01');
+            const now = new Date();
+            const diff = openingDate - now;
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            
+            if (days > 0) {
+                document.querySelector('.banner h2').textContent = `Открытие через ${days} дней!`;
+            }
+        }
+        
+        updateCountdown();
+    </script>
+</body>
+</html>

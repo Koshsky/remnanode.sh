@@ -1,0 +1,53 @@
+---
+# nginx в Docker: /opt/nginx (conf через шаблон, статика, логи для fail2ban).
+
+- name: Каталог /opt/nginx
+  ansible.builtin.file:
+    path: /opt/nginx
+    state: directory
+    mode: "0755"
+
+- name: Статика приложения
+  ansible.builtin.copy:
+    src: app/
+    dest: /opt/nginx/app/
+    mode: "0644"
+
+- name: docker-compose (статичный)
+  ansible.builtin.copy:
+    src: docker-compose.yml
+    dest: /opt/nginx/docker-compose.yml
+    mode: "0644"
+
+- name: nginx.conf из шаблона ({{ DOMAIN }})
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /opt/nginx/nginx.conf
+    mode: "0644"
+  notify: restart nginx container
+
+- name: Каталог логов nginx (для fail2ban)
+  ansible.builtin.file:
+    path: /var/log/nginx
+    state: directory
+    mode: "0755"
+
+- name: Файлы логов
+  ansible.builtin.file:
+    path: "/var/log/nginx/{{ item }}"
+    state: touch
+  loop:
+    - error.log
+    - access.log
+
+- name: /dev/shm/nginx
+  ansible.builtin.file:
+    path: /dev/shm/nginx
+    state: directory
+    mode: "0755"
+
+- name: nginx контейнер (docker compose up)
+  community.docker.docker_compose_v2:
+    project_src: /opt/nginx
+    state: present
+  notify: reload fail2ban

@@ -1,0 +1,13 @@
+---
+# SSL-сертификат (certbot standalone). Запускается ДО nginx — порт 80 свободен.
+
+- name: Каталог /var/www/certbot (webroot для продления)
+  ansible.builtin.file:
+    path: /var/www/certbot
+    state: directory
+    mode: "0755"
+
+- name: Получение SSL-сертификата для {{ DOMAIN }}
+  ansible.builtin.command:
+    cmd: "certbot certonly --standalone --non-interactive --agree-tos --email {{ EMAIL }} -d {{ DOMAIN }} --http-01-port 80 --cert-name {{ DOMAIN }}"
+    creates: "/etc/letsencrypt/live/{{ DOMAIN }}/fullchain.pem"

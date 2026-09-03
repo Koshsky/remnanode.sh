@@ -1,0 +1,19 @@
+services:
+  remnanode:
+    container_name: remnanode
+    hostname: remnanode
+    image: remnawave/node:3.4.1
+    network_mode: host
+    restart: always
+    environment:
+      - NODE_PORT={{ REMNANODE_PORT }}
+      - SECRET_KEY={{ REMNAWAVE_SECRET_KEY }}
+    volumes:
+      - /dev/shm:/dev/shm
+      - /var/log/remnanode:/var/log/remnanode
+      - /opt/remnawave/xray/share/zapret.dat:/usr/local/bin/zapret.dat
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

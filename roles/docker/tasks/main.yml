@@ -1,0 +1,50 @@
+---
+# Docker CE по официальному репозиторию + compose plugin.
+
+- name: Каталог keyrings
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: GPG-ключ репозитория Docker (dearmor)
+  ansible.builtin.command:
+    cmd: curl -fsSL --max-time 30 https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    creates: /etc/apt/keyrings/docker.gpg
+
+- name: source-list репозитория Docker
+  ansible.builtin.template:
+    src: docker.list.j2
+    dest: /etc/apt/sources.list.d/docker.list
+    mode: "0644"
+
+- name: apt update (после добавления репозитория Docker)
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Установка Docker CE
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+
+- name: docker — включить и запустить
+  ansible.builtin.service:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Пользователь в группе docker
+  ansible.builtin.user:
+    name: "{{ NEW_USER_LOGIN }}"
+    groups: docker
+    append: true
+
+- name: Проверка docker
+  ansible.builtin.command: docker --version
+  changed_when: false
+  register: docker_ver

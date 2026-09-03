@@ -1,0 +1,34 @@
+---
+# RemnaNode (/opt/remnanode): compose из шаблона + zapret cron.
+
+- name: Каталог /opt/remnanode
+  ansible.builtin.file:
+    path: /opt/remnanode
+    state: directory
+    mode: "0755"
+
+- name: docker-compose из шаблона (порт + секрет)
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: /opt/remnanode/docker-compose.yml
+    mode: "0644"
+
+- name: Каталоги томов
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - /var/log/remnanode
+    - /opt/remnawave/xray/share
+
+- name: cron — обновление zapret.dat (02:00/14:00)
+  ansible.builtin.cron:
+    name: zapret update
+    minute: "0"
+    hour: "2,14"
+    job: "wget -q --timeout=30 -T 30 -O /opt/remnawave/xray/share/zapret.dat https://github.com/kutovoys/ru_gov_zapret/releases/latest/download/zapret.dat"
+
+- name: remnanode контейнер (docker compose up)
+  community.docker.docker_compose_v2:
+    project_src: /opt/remnanode
+    state: present
