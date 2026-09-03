@@ -8,11 +8,13 @@
     append: true
     shell: /bin/bash
     create_home: true
+  register: user_result
 
-- name: Пароль пользователя
+- name: Пароль пользователя (только при создании — повторные прогоны не переписывают)
   ansible.builtin.command:
     cmd: "echo '{{ NEW_USER_LOGIN }}:{{ NEW_USER_PASSWORD }}' | chpasswd"
   no_log: true
+  when: user_result.changed
 
 - name: SSH-ключ пользователю (authorized_keys)
   ansible.builtin.authorized_key:
