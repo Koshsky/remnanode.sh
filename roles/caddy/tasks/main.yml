@@ -1,0 +1,37 @@
+---
+# Caddy на узле: landing-страница и /health за xray (unix-сокет, PROXY protocol),
+# сертификаты Caddy выпускает сам (ACME). Заменяет nginx + certbot + renew-cron.
+
+- name: Каталог /opt/caddy
+  ansible.builtin.file:
+    path: /opt/caddy
+    state: directory
+    mode: "0755"
+
+- name: Убрать старый nginx-контейнер и сокет (переезд с nginx на caddy)
+  ansible.builtin.shell: "docker rm -f nginx 2>/dev/null; rm -f /dev/shm/nginx.sock 2>/dev/null; true"
+  changed_when: false
+
+- name: Статика приложения
+  ansible.builtin.copy:
+    src: app/
+    dest: /opt/caddy/app/
+    mode: "0644"
+
+- name: docker-compose
+  ansible.builtin.copy:
+    src: docker-compose.yml
+    dest: /opt/caddy/docker-compose.yml
+    mode: "0644"
+
+- name: Caddyfile из шаблона ({{ DOMAIN }})
+  ansible.builtin.template:
+    src: Caddyfile.j2
+    dest: /opt/caddy/Caddyfile
+    mode: "0644"
+  notify: restart caddy container
+
+- name: caddy контейнер (docker compose up)
+  community.docker.docker_compose_v2:
+    project_src: /opt/caddy
+    state: present

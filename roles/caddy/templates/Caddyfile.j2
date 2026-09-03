@@ -1,0 +1,27 @@
+{
+{% if EMAIL | default('') %}	email {{ EMAIL }}
+{% endif %}	servers {
+		listener_wrappers {
+			proxy_protocol
+			tls
+		}
+	}
+}
+
+:80 {
+	redir https://{host}{uri} permanent
+}
+
+# Landing-страница узла за xray: xray фолбэчит TLS-трафик на этот unix-сокет
+# (PROXY protocol; unix-сокеты доверены по умолчанию). Сертификат для DOMAIN
+# Caddy выпускает и продлевает сам (ACME http-01 через порт 80).
+unix//dev/shm/nginx.sock {
+	tls {{ DOMAIN }}
+	root * /var/www/html
+
+	@health path /health
+	respond @health 200 "healthy"
+
+	file_server
+	header X-Robots-Tag "noindex, nofollow"
+}
