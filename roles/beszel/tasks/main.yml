@@ -27,6 +27,7 @@
     src: docker-compose.yml.j2
     dest: /opt/beszel-agent/docker-compose.yml
     mode: "0644"
+  notify: restart beszel agent
   when: BESZEL_HUB_URL | default('') | length > 0
 
 - name: Beszel-агент (docker compose up)

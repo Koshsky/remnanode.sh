@@ -12,6 +12,7 @@
     src: docker-compose.yml.j2
     dest: /opt/remnanode/docker-compose.yml
     mode: "0644"
+  notify: restart remnanode container
 
 - name: Каталоги томов
   ansible.builtin.file:

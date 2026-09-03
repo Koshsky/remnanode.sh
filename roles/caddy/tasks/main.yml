@@ -37,9 +37,19 @@
     mode: "0644"
   notify: restart caddy container
 
-- name: Поднять контейнер caddy (docker run)
+- name: Поднять контейнер caddy (docker run — переживает любые состояния)
   ansible.builtin.shell: |
-    if ! docker ps -q --filter name=^/caddy$ >/dev/null; then
+    if docker ps -aq --filter name=^/caddy$ | grep -q .; then
+      # контейнер существует в любом состоянии: просто стартуем (no-op, если Up),
+      # при неудаче — пересоздаём
+      docker start caddy 2>/dev/null || { docker rm -f caddy 2>/dev/null; docker run -d --name caddy --restart unless-stopped --network host \
+        -v /opt/caddy/Caddyfile:/etc/caddy/Caddyfile:ro \
+        -v /opt/caddy/app:/var/www/html:ro \
+        -v /opt/caddy/caddy_data:/data \
+        -v /opt/caddy/caddy_config:/config \
+        -v /dev/shm:/dev/shm \
+        caddy:2-alpine; }
+    else
       docker run -d --name caddy --restart unless-stopped --network host \
         -v /opt/caddy/Caddyfile:/etc/caddy/Caddyfile:ro \
         -v /opt/caddy/app:/var/www/html:ro \
@@ -51,10 +61,10 @@
   register: caddy_run
   changed_when: caddy_run.stdout | length > 0
 
-- name: Контейнер caddy поднялся? (иначе — логи для диагностики)
+- name: Контейнер caddy поднялся (Status Up)? иначе — логи для диагностики
   ansible.builtin.shell: |
     for i in $(seq 1 15); do
-      docker ps --filter name=^/caddy$ --format '{{ '{{' }}.Names{{ '}}' }}' | grep -qx caddy && exit 0
+      docker ps --filter name=^/caddy$ --format '{{ '{{' }}.Status{{ '}}' }}' | grep -q '^Up' && exit 0
       sleep 2
     done
     echo '--- docker ps -a ---'
