@@ -12,6 +12,10 @@
   ansible.builtin.shell: "docker rm -f nginx 2>/dev/null; rm -f /dev/shm/nginx.sock 2>/dev/null; true"
   changed_when: false
 
+- name: Убрать конфликтующий/осиротевший контейнер caddy (ручной run, другой проект)
+  ansible.builtin.shell: "docker rm -f caddy 2>/dev/null; true"
+  changed_when: false
+
 - name: Статика приложения
   ansible.builtin.copy:
     src: app/
