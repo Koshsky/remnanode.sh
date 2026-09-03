@@ -1,3 +1,4 @@
 ---
 - name: restart caddy container
-  ansible.builtin.shell: "docker restart caddy"
+  ansible.builtin.shell: "docker restart caddy 2>/dev/null || true"
+  changed_when: false

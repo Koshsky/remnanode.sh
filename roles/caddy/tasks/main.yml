@@ -50,3 +50,17 @@
     fi
   register: caddy_run
   changed_when: caddy_run.stdout | length > 0
+
+- name: Контейнер caddy поднялся? (иначе — логи для диагностики)
+  ansible.builtin.shell: |
+    for i in $(seq 1 15); do
+      docker ps --filter name=^/caddy$ --format '{{ '{{' }}.Names{{ '}}' }}' | grep -qx caddy && exit 0
+      sleep 2
+    done
+    echo '--- docker ps -a ---'
+    docker ps -a --filter name=caddy
+    echo '--- docker logs caddy ---'
+    docker logs caddy 2>&1 | tail -40
+    exit 1
+  register: caddy_watch
+  changed_when: false
