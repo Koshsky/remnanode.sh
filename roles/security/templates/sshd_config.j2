@@ -19,7 +19,10 @@ Subsystem sftp internal-sftp
 
 # Security
 UsePAM yes
-AllowUsers {{ NEW_USER_LOGIN }}
+# ВАЖНО: AllowUsers должен включать root — Ansible ходит root-ом по ключу
+# (PermitRootLogin prohibit-password выше). Без root в списке нода после рестарта
+# sshd теряет любой SSH-доступ (только консоль провайдера).
+AllowUsers root {{ NEW_USER_LOGIN }}
 ClientAliveInterval 300
 ClientAliveCountMax 2
 

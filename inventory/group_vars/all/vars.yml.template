@@ -5,6 +5,10 @@
 # --- обязательные ---
 NEW_USER_LOGIN: user
 NEW_USER_PASSWORD: ""
+# ВАЖНО: RemnaWave выдаёт ПО-НОДНЫЙ секрет (внутри зашиты сертификаты ноды) —
+# для парка задавайте его в inventory/host_vars/<node>.yml (REMNAWAVE_SECRET_KEY),
+# а здесь оставьте ключ первой ноды или пустым. Общий ключ на все ноды =
+# «timeout of 15000ms exceeded» в панели.
 REMNAWAVE_SECRET_KEY: ""
 
 # --- опционально ---
@@ -19,6 +23,7 @@ DOMAIN: "{{ inventory_hostname }}.{{ DOMAIN_ZONE }}"   # auto: node-01.example.c
 SSH_PORT: 22                        # ssh всегда на стандартном 22
 XRAY_PORT: 443
 REMNANODE_PORT: 8443
+CADDY_FALLBACK_PORT: 8445           # порт фоллбэка xray → Caddy (landing/health; dest в панели RemnaWave: 127.0.0.1:8445, proxyProtocol off)
 
 # --- опции ---
 AUTO_REBOOT: ""                    # daily | weekly | "" (выкл)
@@ -28,7 +33,12 @@ UNATTENDED_UPGRADES: true
 # Email для уведомлений unattended-upgrades (пусто — выкл; требует MTA на хосте)
 UNATTENDED_UPGRADES_MAIL: ""
 
-# Beszel-агент (если HUB_URL пуст — агент не ставится)
+# Контрольная машина: статический IP для fail2ban ignoreip (если SSH_CONNECTION на нодах не виден)
+ANSIBLE_CONTROL_IP: ""
+
+# Beszel-агент (если HUB_URL пуст — агент не ставится).
+# Ключ/токен Beszel выдаются на ОДНУ систему (Add System) — для нескольких нод
+# задавайте BESZEL_AGENT_KEY/BESZEL_TOKEN в inventory/host_vars/<node>.yml.
 BESZEL_HUB_URL: "https://dashboard.example.com"
 BESZEL_AGENT_KEY: ""               # из Web-UI hub'а (Add System)
 BESZEL_TOKEN: ""

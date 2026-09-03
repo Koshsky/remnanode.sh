@@ -10,25 +10,47 @@
 - name: Подготовка ключей на контрольной машине
   hosts: localhost
   gather_facts: false
+  # always — play 1 обязан выполняться при ЛЮБОЙ выборке тегов (--tags caddy и т.п.):
+  # без add_host play 2 («provision») останется без хостов.
+  tags: always
   tasks:
-    - name: Каталоги ключей
+    - name: Валидация — в инвентаре нет одинаковых IP (иначе «фантомные» ноды)
+      ansible.builtin.assert:
+        that:
+          - groups['remnanodes'] | default([]) | map('extract', hostvars, 'ansible_host') | list | unique | length == groups['remnanodes'] | default([]) | length
+        fail_msg: "В inventory/hosts.ini есть дубли ansible_host — у каждой ноды должен быть СВОЙ IP (иначе несколько нод провижинингятся/конфликтуют на одной машине)."
+
+    - name: DNS-пречек — домены резолвятся на свои ansible_host (с контрольной машины)
+      ansible.builtin.shell: |
+        ip="$(getent ahostsv4 {{ hostvars[item].DOMAIN }} 2>/dev/null | awk '{print $1; exit}')"
+        if [ -z "$ip" ]; then echo "{{ item }}: НЕ РЕЗОЛВИТСЯ {{ hostvars[item].DOMAIN }}"; exit 0; fi
+        want="{{ hostvars[item].ansible_host }}"
+        [ "$ip" = "$want" ] && echo "{{ item }}: OK $ip" || echo "{{ item }}: MISMATCH DNS=$ip ansible_host=$want (проверь A-запись)"
+      loop: "{{ groups['remnanodes'] | default([]) }}"
+      register: dns_pre
+      changed_when: false
+
+    - name: DNS — вывод проверки
+      ansible.builtin.debug:
+        var: dns_pre.results | map(attribute='stdout') | list
+
+    - name: Каталог ключей park (единый ключ парка)
       ansible.builtin.file:
-        path: "keys/{{ item }}"
+        path: "{{ playbook_dir }}/keys/park"
         state: directory
-      loop: "{{ groups['remnanodes'] | default([]) }}"
+        mode: "0700"
 
-    - name: Генерация ключевой пары (не перезаписывает существующую)
+    - name: Генерация единого ключа парка (не перезаписывает существующий)
       community.crypto.openssh_keypair:
-        path: "keys/{{ item }}/id_ed25519"
+        path: "{{ playbook_dir }}/keys/park/id_ed25519"
         type: ed25519
-        comment: "ansible-remnanode-{{ item }}"
-      loop: "{{ groups['remnanodes'] | default([]) }}"
+        comment: "ansible-remnanode-park"
 
-    - name: Добавить хосты с путём к приватному ключу
+    - name: Добавить хосты с путём к приватному ключу (единый park-ключ)
       ansible.builtin.add_host:
         name: "{{ item }}"
         groups: provision
-        ansible_ssh_private_key_file: "keys/{{ item }}/id_ed25519"
+        ansible_ssh_private_key_file: "{{ playbook_dir }}/keys/park/id_ed25519"
       loop: "{{ groups['remnanodes'] | default([]) }}"
 
 - name: Настройка remnanode
@@ -47,43 +69,74 @@
           - (SSH_PORT | default('')) is match('^[0-9]+$')
           - (XRAY_PORT | default('')) is match('^[0-9]+$')
           - (REMNANODE_PORT | default('')) is match('^[0-9]+$')
+          - (CADDY_FALLBACK_PORT | default('8445')) is match('^[0-9]+$')
           - (BESZEL_AGENT_PORT | default('')) is match('^[0-9]+$')
         fail_msg: "Заполните обязательные переменные в inventory/group_vars/all/vars.yml (в т.ч. DOMAIN_ZONE для автоподстановки DOMAIN); порты — числа"
+
+    # RemnaWave раздаёт per-node секреты (внутри зашиты нодные сертификаты), Beszel —
+    # per-system ключи. Если у нескольких нод ОДИН и тот же секрет — панель/hub их
+    # не примет (таймауты в панели, красные в Beszel). Правильно: inventory/host_vars/<node>.yml.
+    - name: Предупреждение — общий REMNAWAVE_SECRET_KEY у нескольких нод
+      ansible.builtin.debug:
+        msg: "ВНИМАНИЕ: у нескольких нод один REMNAWAVE_SECRET_KEY. RemnaWave выдаёт ПО-НОДНЫЙ секрет — задай в inventory/host_vars/{{ inventory_hostname }}.yml свой SECRET_KEY из панели (Settings → Node). Иначе нода не подключится к панели (timeout)."
+      when:
+        - groups['remnanodes'] | default([]) | length > 1
+        - groups['remnanodes'] | default([]) | map('extract', hostvars, 'REMNAWAVE_SECRET_KEY') | select('defined') | list | unique | length == 1
+      changed_when: false
+
+    - name: Предупреждение — общий Beszel-ключ у нескольких нод
+      ansible.builtin.debug:
+        msg: "ВНИМАНИЕ: у нескольких нод один BESZEL_AGENT_KEY. Beszel выдаёт ключ/токен на СИСТЕМУ (Add System) — задай per-node BESZEL_AGENT_KEY/BESZEL_TOKEN в inventory/host_vars/{{ inventory_hostname }}.yml."
+      when:
+        - groups['remnanodes'] | default([]) | length > 1
+        - groups['remnanodes'] | default([]) | map('extract', hostvars, 'BESZEL_AGENT_KEY') | select('defined') | list | unique | length == 1
+      changed_when: false
   roles:
-    - base
-    - security
-    - docker
-    - caddy
-    - remnanode
-    - beszel
-    - maintenance
+    - { role: base, tags: [base] }
+    - { role: security, tags: [security] }
+    - { role: docker, tags: [docker] }
+    - { role: caddy, tags: [caddy] }
+    - { role: remnanode, tags: [remnanode] }
+    - { role: beszel, tags: [beszel] }
+    - { role: maintenance, tags: [maintenance] }
   post_tasks:
     - name: Healthcheck — RemnaNode слушает порт {{ REMNANODE_PORT }}
       ansible.builtin.shell: "ss -tln | grep -q ':{{ REMNANODE_PORT }} '"
+      register: hc_remnanode
       changed_when: false
+      until: hc_remnanode.rc == 0
+      retries: 15
+      delay: 10
+      tags: checks
 
     - name: Healthcheck — xray слушает порт {{ XRAY_PORT }}
       ansible.builtin.shell: "ss -tln | grep -q ':{{ XRAY_PORT }} '"
+      register: hc_xray
       changed_when: false
+      until: hc_xray.rc == 0
+      retries: 15
+      delay: 10
+      tags: checks
 
     - name: Healthcheck — контейнеры caddy и remnanode запущены
       ansible.builtin.shell: |
         docker ps --format {% raw %}'{{.Names}}'{% endraw %} | grep -qE '^caddy' &&
         docker ps --format {% raw %}'{{.Names}}'{% endraw %} | grep -qx remnanode
       changed_when: false
+      tags: checks
 
+    # Healthcheck через 127.0.0.1 (SNI=DOMAIN): реальный путь браузера (xray→caddy),
+    # НО без зависимости от внешнего DNS — не ловим ложные красные при устаревших A-записях.
     - name: Healthcheck — https://{{ DOMAIN }}/health отвечает 200 (ждём ACME/старт)
-      ansible.builtin.uri:
-        url: "https://{{ DOMAIN }}/health"
-        method: GET
-        status_code: 200
-        validate_certs: true
-        timeout: 10
-      register: health_uri
-      until: health_uri.status == 200
-      retries: 6
+      ansible.builtin.shell: "curl -sk -o /dev/null -w '%{http_code}' --resolve {{ DOMAIN }}:443:127.0.0.1 https://{{ DOMAIN }}/health | grep -q '^200$'"
+      register: hc_https
+      changed_when: false
+      until: hc_https.rc == 0
+      retries: 12
       delay: 10
+      tags: checks
 
     - name: Healthcheck — итог
       ansible.builtin.debug:
         msg: "Все проверки пройдены: RemnaNode :{{ REMNANODE_PORT }}, xray :{{ XRAY_PORT }}, https://{{ DOMAIN }}/health=200"
+      tags: checks

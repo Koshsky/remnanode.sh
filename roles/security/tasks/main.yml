@@ -16,16 +16,16 @@
   no_log: true
   when: user_result.changed
 
-- name: SSH-ключ пользователю (authorized_keys)
+- name: SSH-ключ пользователю (authorized_keys) — единый park-ключ
   ansible.builtin.authorized_key:
     user: "{{ NEW_USER_LOGIN }}"
-    key: "{{ lookup('file', playbook_dir ~ '/keys/' ~ inventory_hostname ~ '/id_ed25519.pub') }}"
+    key: "{{ lookup('file', playbook_dir ~ '/keys/park/id_ed25519.pub') }}"
     state: present
 
-- name: SSH-ключ root — для повторных запусков Ansible по ключу
+- name: SSH-ключ root — единый park-ключ (для повторных запусков Ansible по ключу)
   ansible.builtin.authorized_key:
     user: root
-    key: "{{ lookup('file', playbook_dir ~ '/keys/' ~ inventory_hostname ~ '/id_ed25519.pub') }}"
+    key: "{{ lookup('file', playbook_dir ~ '/keys/park/id_ed25519.pub') }}"
     state: present
 
 - name: sshd_config из шаблона

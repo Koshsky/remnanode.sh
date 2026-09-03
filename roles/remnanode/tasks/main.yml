@@ -29,6 +29,23 @@
     hour: "2,14"
     job: "wget -q --timeout=30 -T 30 -O /opt/remnawave/xray/share/zapret.dat https://github.com/kutovoys/ru_gov_zapret/releases/latest/download/zapret.dat"
 
+# zapret.dat монтируется в контейнер КАК ФАЙЛ; на свежей ноде файла нет, и docker
+# создал бы пустой КАТАЛОГ → контейнер не стартует. Скачиваем ДО compose up;
+# при недоступности GitHub гарантируем пустой файл (cron обновит позже).
+- name: zapret.dat — скачать до старта контейнера
+  ansible.builtin.get_url:
+    url: https://github.com/kutovoys/ru_gov_zapret/releases/latest/download/zapret.dat
+    dest: /opt/remnawave/xray/share/zapret.dat
+    mode: "0644"
+  ignore_errors: true
+
+- name: zapret.dat — гарантировать файл (пустой, если GitHub недоступен)
+  ansible.builtin.copy:
+    content: ""
+    dest: /opt/remnawave/xray/share/zapret.dat
+    mode: "0644"
+    force: false
+
 - name: remnanode контейнер (docker compose up)
   community.docker.docker_compose_v2:
     project_src: /opt/remnanode

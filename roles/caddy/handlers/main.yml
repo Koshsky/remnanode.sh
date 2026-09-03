@@ -1,4 +1,26 @@
 ---
+# Рестарт caddy: удалить и пересоздать с retry-на-конфликт имени. Handle-случай,
+# когда имя занято параллельным процессом/предыдущим контейнером («name already
+# in use», «marked for removal») — docker run повторяется, конфликтующий
+# контейнер удаляется перед каждой попыткой.
 - name: restart caddy container
-  ansible.builtin.shell: "docker restart caddy 2>/dev/null || true"
+  ansible.builtin.shell: |
+    docker rm -f caddy 2>/dev/null || true
+    for i in $(seq 1 15); do
+      if docker run -d --name caddy --restart unless-stopped --network host \
+        -v /opt/caddy/Caddyfile:/etc/caddy/Caddyfile:ro \
+        -v /opt/caddy/app:/var/www/html:ro \
+        -v /opt/caddy/caddy_data:/data \
+        -v /opt/caddy/caddy_config:/config \
+        -v /dev/shm:/dev/shm \
+        caddy:2.11.4-alpine >/dev/null 2>&1; then
+        exit 0
+      fi
+      docker rm -f caddy 2>/dev/null || true
+      sleep 1
+    done
+    echo "caddy не поднялся за 15 попыток" >&2
+    docker ps -a --filter name=caddy
+    docker logs caddy 2>&1 | tail -20
+    exit 1
   changed_when: false

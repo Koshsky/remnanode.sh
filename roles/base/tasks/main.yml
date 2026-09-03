@@ -32,11 +32,13 @@
 
 # Ручной прогон playbook = осознанное полное обновление системы (включая ядра из -updates).
 # Автоматический режим — только security (unattended-upgrades, см. 20auto-upgrades/99-оверрайд).
+# Быстрый прогон: --skip-tags upgrade. Только апгрейд: --tags upgrade.
 - name: Полное обновление системы
   ansible.builtin.apt:
     upgrade: full
     update_cache: true
     lock_timeout: 900
+  tags: upgrade
 
 - name: Базовые пакеты
   ansible.builtin.apt:

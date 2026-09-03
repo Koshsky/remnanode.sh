@@ -6,7 +6,7 @@ findtime = 600
 maxretry = 3
 backend = auto
 # Не банить контрольную машину Ansible во время провижининга
-ignoreip = 127.0.0.1/8 {% if control_ip | default('') %} {{ control_ip }}{% endif %}
+ignoreip = 127.0.0.1/8 {% if control_ip | default('') %} {{ control_ip }}{% endif %}{% if ANSIBLE_CONTROL_IP | default('') %} {{ ANSIBLE_CONTROL_IP }}{% endif %}
 
 [sshd]
 enabled = true

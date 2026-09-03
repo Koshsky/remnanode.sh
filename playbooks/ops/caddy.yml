@@ -1,0 +1,10 @@
+---
+# Только роль caddy (для отладки/теста, без base/security/docker и apt-upgrade).
+# Запуск: ansible-playbook -i inventory/hosts.ini playbooks/ops/caddy.yml
+# Одна нода: … --limit node-06
+- name: Caddy (тест роли)
+  hosts: remnanodes
+  gather_facts: true
+  become: true
+  roles:
+    - caddy

@@ -1,27 +1,29 @@
 {
 {% if EMAIL | default('') %}	email {{ EMAIL }}
-{% endif %}	servers {
-		listener_wrappers {
-			proxy_protocol
-			tls
-		}
-	}
+{% endif %}	# ВАЖНО: НЕ добавлять servers { listener_wrappers { tls } } — в Caddy 2.11
+	# tls listener-wrapper отдаёт ответы с ПУСТЫМ телом. TLS делает штатный
+	# auto-HTTPS сайта на домене. Также `respond` в 2.11 отдаёт пустое тело —
+	# /health отдаётся файлом через file_server (см. app/health).
 }
 
 :80 {
 	redir https://{host}{uri} permanent
 }
 
-# Landing-страница узла за xray: xray фолбэчит TLS-трафик на этот unix-сокет
-# (PROXY protocol; unix-сокеты доверены по умолчанию). Сертификат для DOMAIN
-# Caddy выпускает и продлевает сам (ACME http-01 через порт 80).
-unix//dev/shm/nginx.sock {
-	tls {{ DOMAIN }}
+# Landing/health за xray: браузерный TLS уходит из xray фолбэком на этот сайт.
+# Сайт на ДОМЕНЕ = обычный auto-HTTPS: настоящий ACME-сертификат для DOMAIN,
+# отдача по SNI (никаких listener-wrappers). Порт слушается на всех интерфейсах,
+# но в UFW НЕ открыт — снаружи недоступен; xray ходит на 127.0.0.1:8445.
+# Фоллбэк-дест в панели RemnaWave: 127.0.0.1:8445 (tcp), proxyProtocol — ВЫКЛ.
+{{ DOMAIN }}:{{ CADDY_FALLBACK_PORT | default(8445) }} {
 	root * /var/www/html
 
-	@health path /health
-	respond @health 200 "healthy"
+	handle /health {
+		file_server
+	}
+	handle {
+		file_server
+	}
 
-	file_server
 	header X-Robots-Tag "noindex, nofollow"
 }

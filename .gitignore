@@ -6,3 +6,10 @@ inventory/host_vars/*.yml
 !inventory/host_vars/*.example.yml
 keys/
 *.retry
+# локальное окружение контрольной машины (venv + коллекции + временное)
+.venv/
+collections/
+.caddy-test/
+.ansible-tmp/
+.pip-cache/
+*.log

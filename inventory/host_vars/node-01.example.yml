@@ -9,3 +9,10 @@
 # Вариант 2 — полностью свой домен (hostname на машине останется именем хоста
 # из инвентаря; если нужен и совпадающий hostname — переименуйте хост в inventory):
 # DOMAIN: "custom-node.example.org"
+
+# ВАЖНО для парка: RemnaWave выдаёт ПО-НОДНЫЙ секрет (Settings → Node каждой ноды),
+# Beszel — ключ/токен на систему (Add System). Общие group_vars/all значения —
+# только для одной ноды; для каждой дополнительной ноды задавайте здесь свои:
+# REMNAWAVE_SECRET_KEY: "eyJ...узловой секрет из панели..."
+# BESZEL_AGENT_KEY: "ssh-ed25519 AAAA...ключ из Add System..."
+# BESZEL_TOKEN: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"

@@ -39,27 +39,35 @@
 
 - name: Поднять контейнер caddy (docker run — переживает любые состояния)
   ansible.builtin.shell: |
-    if docker ps -aq --filter name=^/caddy$ | grep -q .; then
-      # контейнер существует в любом состоянии: просто стартуем (no-op, если Up),
-      # при неудаче — пересоздаём
-      docker start caddy 2>/dev/null || { docker rm -f caddy 2>/dev/null; docker run -d --name caddy --restart unless-stopped --network host \
-        -v /opt/caddy/Caddyfile:/etc/caddy/Caddyfile:ro \
-        -v /opt/caddy/app:/var/www/html:ro \
-        -v /opt/caddy/caddy_data:/data \
-        -v /opt/caddy/caddy_config:/config \
-        -v /dev/shm:/dev/shm \
-        caddy:2-alpine; }
-    else
-      docker run -d --name caddy --restart unless-stopped --network host \
-        -v /opt/caddy/Caddyfile:/etc/caddy/Caddyfile:ro \
-        -v /opt/caddy/app:/var/www/html:ro \
-        -v /opt/caddy/caddy_data:/data \
-        -v /opt/caddy/caddy_config:/config \
-        -v /dev/shm:/dev/shm \
-        caddy:2-alpine
+    # Контейнер жив и работает? — ничего не трогаем (принцип: рестарт только при
+    # необходимости). Если нет — стартуем существующий; не стартуется («marked for
+    # removal» и т.п.) — удаляем и пересоздаём с retry-на-конфликт (имя может
+    # занять параллельный процесс).
+    if docker ps --filter name=^/caddy$ --format '{{ '{{' }}.Status{{ '}}' }}' | grep -q '^Up'; then
+      exit 0
     fi
+    docker start caddy 2>/dev/null && exit 0
+    docker rm -f caddy 2>/dev/null || true
+    for i in $(seq 1 10); do
+      if docker run -d --name caddy --restart unless-stopped --network host \
+        -v /opt/caddy/Caddyfile:/etc/caddy/Caddyfile:ro \
+        -v /opt/caddy/app:/var/www/html:ro \
+        -v /opt/caddy/caddy_data:/data \
+        -v /opt/caddy/caddy_config:/config \
+        -v /dev/shm:/dev/shm \
+        caddy:2.11.4-alpine >/dev/null 2>&1; then
+        exit 0
+      fi
+      # конфликт имени: убрать того, кто держит «caddy», и повторить
+      docker rm -f caddy 2>/dev/null || true
+      sleep 1
+    done
+    echo "caddy не поднялся за 10 попыток" >&2
+    docker ps -a --filter name=caddy
+    docker logs caddy 2>&1 | tail -20
+    exit 1
   register: caddy_run
-  changed_when: caddy_run.stdout | length > 0
+  changed_when: false
 
 - name: Контейнер caddy поднялся (Status Up)? иначе — логи для диагностики
   ansible.builtin.shell: |

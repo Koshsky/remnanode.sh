@@ -53,6 +53,21 @@ cp inventory/group_vars/all/vars.yml.template inventory/group_vars/all/vars.yml 
 | `BESZEL_AGENT_PORT` | нет | Порт агента, по умолчанию 45876 |
 | `BESZEL_ALLOW_FROM` | нет | IP/подсеть hub'а — открыть 45876 в UFW (SSH-режим Beszel) |
 
+### Быстрые прогоны (скип-логика)
+
+| Сценарий | Команда |
+|---|---|
+| Полный (включая апгрейд пакетов и healthcheck'и) | `ansible-playbook playbooks/provision.yml` |
+| Быстрый (идемпотентность/проверка без апгрейда) | `… --skip-tags upgrade` |
+| Только обновление системы | `… --tags upgrade` |
+| Только роль (например caddy) | `… --tags caddy` |
+| Одна нода | `… --limit node-06` |
+| Итерация без ожидания healthcheck'ов | `… --skip-tags checks` |
+| Максимально быстро | `… --skip-tags upgrade,checks` |
+
+Тег `upgrade` — на `apt full-upgrade`; тег `checks` — на пост-проверках.
+Установка Docker CE пропускается, если docker уже стоит (обновления — через `--tags upgrade`).
+
 ## Запуск
 
 ```bash
@@ -79,6 +94,19 @@ ansible-playbook -i inventory/hosts.ini playbooks/provision.yml
   `host_vars` перекрывает `group_vars/all`. Если hostname машины должен совпадать
   с первым сегментом кастомного домена — переименуйте хост в инвентаре.
 
+### Секреты на ноду (обязательно для парка!)
+
+RemnaWave выдаёт **по-НОДНЫЙ** secret (внутри зашиты сертификаты ноды), Beszel —
+ключ/токен **на систему** (Add System). Если у нескольких нод один общий секрет —
+в панели RemnaWave нода висит как `timeout of 15000ms exceeded`, в Beszel — red/missing.
+Для каждой ноды сверх первой: `inventory/host_vars/<host>.yml`
+```yaml
+REMNAWAVE_SECRET_KEY: "eyJ...секрет из Settings → Node этой ноды"
+BESZEL_AGENT_KEY: "ssh-ed25519 AAAA..."   # из Add System этой ноды
+BESZEL_TOKEN: "xxxxxxxx-xxxx-..."
+```
+Провижининг предупредит (не упадёт), если секреты у нескольких нод совпадают.
+
 ## Что делает playbook
 
 1. Генерирует ключи, ставит hostname (имя из инвентаря) и обновляет систему.
@@ -86,7 +114,11 @@ ansible-playbook -i inventory/hosts.ini playbooks/provision.yml
 3. Пользователь + SSH-ключи (root и user) → sshd (свой порт, root-пароль и пароли запрещены).
 4. fail2ban (sshd) и UFW (default deny).
 5. Caddy в Docker: сам выпускает и продлевает SSL для домена узла (ACME) и отдаёт
-   landing/health за xray (unix-сокет, PROXY protocol) → RemnaNode (образ пинится 2.7.0).
+   landing/health за xray (TCP-loopback `127.0.0.1:8445`, БЕЗ PROXY protocol —
+   в панели RemnaWave у фоллбэка ноды proxyProtocol выключен; listener-wrappers
+   tls в Caddy 2.11 режут тела ответов, поэтому схема без wrapper'ов). На :443
+   xray принимает VLESS — Caddy :443 НЕ слушает (иначе перехватывал бы клиентов)
+   → RemnaNode (образ пинится 2.7.0).
 6. Cron: zapret.dat (02:00/14:00), опц. перезагрузка; logrotate (продление SSL — на Caddy).
 7. Beszel-агент (если задан) + опциональное UFW-правило для SSH-режима.
 
@@ -153,6 +185,9 @@ roles/
 - `Все порты молчат, таймауты` — пакеты не доходят до машины: проверь публичный IP
   ноды (`curl -s ifconfig.me` на ней), DNS, фаервол/панель провайдера.
 - `401 от Beszel` — ключ/токен не совпадают с hub: перевыпустить через Add System.
+- `https://<domain>/health` молчит, хотя caddy/xray Up — проверь в панели RemnaWave
+  fallback ноды: dest должен быть `127.0.0.1:8445` (tcp), а не `/dev/shm/nginx.sock`
+  (unix-сокет Caddy больше не создаёт).
 - `Connection timed out` во время провижининга при открытом ufw/верном порте — fail2ban
   забанил твой IP (ControlMaster в `ansible.cfg` держит одно соединение на хост, так что
   на новых прогонах это исключено; текущий бан: `fail2ban-client set sshd unbanip <твой_IP>`

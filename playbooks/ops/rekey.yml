@@ -1,44 +1,53 @@
 ---
-# Перевыпуск SSH-ключей для машин (восстановление доступа/ротация).
-# Прогнать с любым рабочим доступом (пароль или существующий ключ).
+# Ротация ЕДИНОГО park-ключа парка (playbooks/keys/park/id_ed25519).
+# Безопасный порядок: бэкап старого ключа → генерация нового → новый pub
+# УСТАНАВЛИВАЕТСЯ на все ноды (root + пользователь) ДО любых других действий.
+# Старые pub в authorized_keys НЕ удаляются — остаются страховкой; очистка
+# старых — отдельный осознанный шаг.
+# Запуск: ansible-playbook -i inventory/hosts.ini playbooks/ops/rekey.yml
+# Требуется рабочий доступ к нодам (старый park-ключ или пароль).
 
-- name: Перевыпуск ключей на контрольной машине
+- name: Перевыпуск единого park-ключа на контрольной машине
   hosts: localhost
   gather_facts: false
   tasks:
-    - name: Каталоги ключей
+    - name: Каталог park
       ansible.builtin.file:
-        path: "keys/{{ item }}"
+        path: "{{ playbook_dir }}/keys/park"
         state: directory
-      loop: "{{ groups['remnanodes'] | default([]) }}"
+        mode: "0700"
+
+    - name: Бэкап прежнего ключа (id_ed25519.old)
+      ansible.builtin.shell: |
+        [ -f "{{ playbook_dir }}/keys/park/id_ed25519" ] && cp -a "{{ playbook_dir }}/keys/park/id_ed25519" "{{ playbook_dir }}/keys/park/id_ed25519.old" || true
+      changed_when: false
 
     - name: Генерация новой пары (force — перезапишет)
       community.crypto.openssh_keypair:
-        path: "keys/{{ item }}/id_ed25519"
+        path: "{{ playbook_dir }}/keys/park/id_ed25519"
         type: ed25519
-        comment: "ansible-remnanode-{{ item }}"
+        comment: "ansible-remnanode-park"
         force: true
-      loop: "{{ groups['remnanodes'] | default([]) }}"
 
-    - name: Хосты с новым ключом
+    - name: Хосты с новым park-ключом
       ansible.builtin.add_host:
         name: "{{ item }}"
         groups: provision
-        ansible_ssh_private_key_file: "keys/{{ item }}/id_ed25519"
+        ansible_ssh_private_key_file: "{{ playbook_dir }}/keys/park/id_ed25519"
       loop: "{{ groups['remnanodes'] | default([]) }}"
 
-- name: Установить новый ключ в authorized_keys
+- name: Установить новый парковый ключ в authorized_keys
   hosts: provision
   become: true
   tasks:
-    - name: root — новый ключ
+    - name: root — новый park-ключ
       ansible.builtin.authorized_key:
         user: root
-        key: "{{ lookup('file', playbook_dir ~ '/keys/' ~ inventory_hostname ~ '/id_ed25519.pub') }}"
+        key: "{{ lookup('file', playbook_dir ~ '/keys/park/id_ed25519.pub') }}"
         state: present
 
-    - name: Пользователь — новый ключ
+    - name: Пользователь — новый park-ключ
       ansible.builtin.authorized_key:
         user: "{{ NEW_USER_LOGIN }}"
-        key: "{{ lookup('file', playbook_dir ~ '/keys/' ~ inventory_hostname ~ '/id_ed25519.pub') }}"
+        key: "{{ lookup('file', playbook_dir ~ '/keys/park/id_ed25519.pub') }}"
         state: present

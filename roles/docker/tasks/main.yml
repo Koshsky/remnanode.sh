@@ -23,7 +23,13 @@
     update_cache: true
     lock_timeout: 900
 
-- name: Установка Docker CE
+- name: docker-ce уже установлен? (скипаем установку при повторных прогонах)
+  ansible.builtin.command: docker --version
+  register: docker_presence
+  changed_when: false
+  ignore_errors: true
+
+- name: Установка Docker CE (пропуск, если уже стоит)
   ansible.builtin.apt:
     name:
       - docker-ce
@@ -33,6 +39,7 @@
       - docker-compose-plugin
     state: present
     lock_timeout: 900
+  when: docker_presence.rc != 0
 
 - name: docker — включить и запустить
   ansible.builtin.service:
