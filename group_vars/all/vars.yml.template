@@ -9,6 +9,8 @@ EMAIL: you@example.com
 REMNAWAVE_SECRET_KEY: ""
 
 # --- сеть / домен ---
+# Зона по умолчанию для всего парка. Если у нод разные зоны/домены —
+# задайте DOMAIN (или DOMAIN_ZONE) в host_vars/<host>.yml — это перекроет значение.
 DOMAIN_ZONE: example.com            # node-01.example.com
 DOMAIN: "{{ inventory_hostname }}.{{ DOMAIN_ZONE }}"   # auto: node-01.example.com
 SSH_PORT: 222

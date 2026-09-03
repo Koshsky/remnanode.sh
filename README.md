@@ -41,7 +41,8 @@ cp group_vars/all/vars.yml.template group_vars/all/vars.yml   # заполнит
 | `NEW_USER_LOGIN` / `NEW_USER_PASSWORD` | да | Пользователь (sudo) и его пароль |
 | `EMAIL` | да | Почта для certbot |
 | `REMNAWAVE_SECRET_KEY` | да | Секрет RemnaWave |
-| `DOMAIN_ZONE` | да | Домен: DOMAIN = `<hostname>.<DOMAIN_ZONE>` (hostname = имя хоста в инвентаре) |
+| `DOMAIN_ZONE` | да | Зона по умолчанию: `DOMAIN = <hostname>.<DOMAIN_ZONE>`; для нод с другим доменом — `host_vars/<host>.yml` (`DOMAIN`/`DOMAIN_ZONE` перекроет) |
+| `DOMAIN` | — | Вычисляется автоматически; переопределяется в `host_vars/<host>.yml` |
 | `SSH_PORT` | нет | Порт SSH, по умолчанию 222 |
 | `XRAY_PORT` / `REMNANODE_PORT` | нет | Порт Xray (443) / RemnaNode (8443) |
 | `AUTO_REBOOT` | нет | `daily`, `weekly` или пусто (выкл) — авто-перезагрузка в 5:00 |
@@ -64,6 +65,19 @@ ansible-playbook -i inventory/hosts.ini playbooks/provision.yml
 
 Новая машина = добавить строку в `inventory/hosts.ini` (`<name> ansible_host=<IP> ansible_user=root`)
 и прогнать playbook — hub Beszel при этом трогать не нужно (агент регистрируется сам).
+
+### Домены / разные доменные зоны
+
+- Парк в одной зоне: задаётся только `DOMAIN_ZONE`, `DOMAIN` вычисляется (`<hostname>.<DOMAIN_ZONE>`).
+- Узлы в разных зонах или с кастомными доменами: `host_vars/<host>.yml`
+  (файлы gitignored, пример — `host_vars/node-01.example.yml`):
+  ```yaml
+  DOMAIN: "custom-node.example.org"        # полный домен
+  # или другая зона с hostname-шаблоном:
+  # DOMAIN_ZONE: shop.example
+  ```
+  `host_vars` перекрывает `group_vars/all`. Если hostname машины должен совпадать
+  с первым сегментом кастомного домена — переименуйте хост в инвентаре.
 
 ## Что делает playbook
 

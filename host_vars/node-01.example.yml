@@ -1,0 +1,11 @@
+# Пример per-host переопределения домена.
+# Скопировать в host_vars/<имя-хоста-из-inventory>.yml (например, host_vars/node-06.yml)
+# и заполнить. host_vars имеет приоритет над group_vars/all/vars.yml.
+# Реальные файлы host_vars/*.yml gitignored; этот .example.yml — шаблон.
+
+# Вариант 1 — другая доменная зона, hostname-шаблон сохраняется:
+# DOMAIN_ZONE: shop.example
+
+# Вариант 2 — полностью свой домен (hostname на машине останется именем хоста
+# из инвентаря; если нужен и совпадающий hostname — переименуйте хост в inventory):
+# DOMAIN: "custom-node.example.org"

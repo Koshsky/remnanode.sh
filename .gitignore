@@ -2,5 +2,7 @@
 .dsh-project-memory/
 inventory/hosts.ini
 group_vars/all/vars.yml
+host_vars/*.yml
+!host_vars/*.example.yml
 keys/
 *.retry
