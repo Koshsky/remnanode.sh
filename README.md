@@ -43,7 +43,7 @@ cp inventory/group_vars/all/vars.yml.template inventory/group_vars/all/vars.yml 
 | `REMNAWAVE_SECRET_KEY` | да | Секрет RemnaWave |
 | `DOMAIN_ZONE` | да | Зона по умолчанию: `DOMAIN = <hostname>.<DOMAIN_ZONE>`; для нод с другим доменом — `inventory/host_vars/<host>.yml` (`DOMAIN`/`DOMAIN_ZONE` перекроет) |
 | `DOMAIN` | — | Вычисляется автоматически; переопределяется в `inventory/host_vars/<host>.yml` |
-| `SSH_PORT` | нет | Порт SSH, по умолчанию 222 |
+| `SSH_PORT` | нет | Порт SSH, по умолчанию 22 (рекомендуется оставлять стандартным) |
 | `XRAY_PORT` / `REMNANODE_PORT` | нет | Порт Xray (443) / RemnaNode (8443) |
 | `AUTO_REBOOT` | нет | `daily`, `weekly` или пусто (выкл) — авто-перезагрузка в 5:00 |
 | `UNATTENDED_UPGRADES` | нет | Автообновления: `true` (по умолчанию, **только security**) или `false` (полностью выключить) |
