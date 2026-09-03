@@ -1,18 +1,6 @@
 ---
-# Обслуживание: продление сертификатов, logrotate, опциональная перезагрузка.
-
-- name: renewable_ssl_certificates.sh → /usr/local/bin
-  ansible.builtin.copy:
-    src: renew_ssl_certificates.sh
-    dest: /usr/local/bin/renew_ssl_certificates.sh
-    mode: "0755"
-
-- name: cron — продление сертификатов (03:00)
-  ansible.builtin.cron:
-    name: certbot renew
-    minute: "0"
-    hour: "3"
-    job: /usr/local/bin/renew_ssl_certificates.sh
+# Обслуживание: logrotate, опциональная перезагрузка.
+# Продление сертификатов НЕ настраиваем — им занимается Caddy (ACME).
 
 - name: Проверка AUTO_REBOOT
   ansible.builtin.assert:
