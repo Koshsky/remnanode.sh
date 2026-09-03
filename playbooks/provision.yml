@@ -59,3 +59,29 @@
     - remnanode
     - beszel
     - maintenance
+  post_tasks:
+    - name: Healthcheck — RemnaNode слушает порт {{ REMNANODE_PORT }}
+      ansible.builtin.shell: "ss -tln | grep -q ' :{{ REMNANODE_PORT }} '"
+      changed_when: false
+
+    - name: Healthcheck — xray слушает порт {{ XRAY_PORT }}
+      ansible.builtin.shell: "ss -tln | grep -q ' :{{ XRAY_PORT }} '"
+      changed_when: false
+
+    - name: Healthcheck — контейнеры nginx и remnanode запущены
+      ansible.builtin.shell: |
+        docker ps --format '{{ '{{' }}.Names{{ '}}' }}' | grep -qx nginx &&
+        docker ps --format '{{ '{{' }}.Names{{ '}}' }}' | grep -qx remnanode
+      changed_when: false
+
+    - name: Healthcheck — https://{{ DOMAIN }}/health отвечает 200
+      ansible.builtin.uri:
+        url: "https://{{ DOMAIN }}/health"
+        method: GET
+        status_code: 200
+        validate_certs: true
+        timeout: 10
+
+    - name: Healthcheck — итог
+      ansible.builtin.debug:
+        msg: "Все проверки пройдены: RemnaNode :{{ REMNANODE_PORT }}, xray :{{ XRAY_PORT }}, https://{{ DOMAIN }}/health=200"
