@@ -66,10 +66,10 @@
       ansible.builtin.shell: "ss -tln | grep -q ':{{ XRAY_PORT }} '"
       changed_when: false
 
-    - name: Healthcheck — контейнеры nginx и remnanode запущены
+    - name: Healthcheck — контейнеры caddy и remnanode запущены
       ansible.builtin.shell: |
-        docker ps --format '{{ '{{' }}.Names{{ '}}' }}' | grep -qx nginx &&
-        docker ps --format '{{ '{{' }}.Names{{ '}}' }}' | grep -qx remnanode
+        docker ps --format {% raw %}'{{.Names}}'{% endraw %} | grep -qE '^caddy' &&
+        docker ps --format {% raw %}'{{.Names}}'{% endraw %} | grep -qx remnanode
       changed_when: false
 
     - name: Healthcheck — https://{{ DOMAIN }}/health отвечает 200
