@@ -17,6 +17,11 @@ REMNANODE_PORT: 8443
 # --- опции ---
 AUTO_REBOOT: ""                    # daily | weekly | "" (выкл)
 
+# Автообновления: true — только security-паттерны (по умолчанию); false — полностью выключить
+UNATTENDED_UPGRADES: true
+# Email для уведомлений unattended-upgrades (пусто — выкл; требует MTA на хосте)
+UNATTENDED_UPGRADES_MAIL: ""
+
 # Beszel-агент (если HUB_URL пуст — агент не ставится)
 BESZEL_HUB_URL: "https://dashboard.example.com"
 BESZEL_AGENT_KEY: ""               # из Web-UI hub'а (Add System)

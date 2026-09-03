@@ -45,6 +45,8 @@ cp group_vars/all/vars.yml.template group_vars/all/vars.yml   # заполнит
 | `SSH_PORT` | нет | Порт SSH, по умолчанию 222 |
 | `XRAY_PORT` / `REMNANODE_PORT` | нет | Порт Xray (443) / RemnaNode (8443) |
 | `AUTO_REBOOT` | нет | `daily`, `weekly` или пусто (выкл) — авто-перезагрузка в 5:00 |
+| `UNATTENDED_UPGRADES` | нет | Автообновления: `true` (по умолчанию, **только security**) или `false` (полностью выключить) |
+| `UNATTENDED_UPGRADES_MAIL` | нет | Email уведомлений unattended-upgrades (пусто — выкл; требует MTA на хосте) |
 | `BESZEL_HUB_URL` | нет | Адрес hub'а Beszel; пусто — агент не ставится |
 | `BESZEL_AGENT_KEY` / `BESZEL_TOKEN` | нет | Ключ/токен из Web-UI hub'а (Add System) |
 | `BESZEL_AGENT_PORT` | нет | Порт агента, по умолчанию 45876 |
@@ -72,6 +74,18 @@ ansible-playbook -i inventory/hosts.ini playbooks/provision.yml
 5. SSL (certbot standalone на свободном 80) → nginx в Docker → RemnaNode (образ пинится 2.7.0).
 6. Cron: продление сертификатов (03:00), zapret.dat (02:00/14:00), опц. перезагрузка; logrotate.
 7. Beszel-агент (если задан) + опциональное UFW-правило для SSH-режима.
+
+### Автообновления (unattended-upgrades)
+
+- Включены по умолчанию, но **только для канала security**: оверрайд
+  `99unattended-upgrades-security-only` сужает `Origins-Pattern` до
+  `Ubuntu-Security`. Ядра и обычные обновления из `-updates` авто-режимом **не**
+  трогаются (кроме security-патчей ядра — их применение всё равно требует ребута,
+  который управляется отдельно через `AUTO_REBOOT` или вручную).
+- `UNATTENDED_UPGRADES: false` — полностью выключает (флаг «1»→«0» в
+  `20auto-upgrades`, таймеры останавливаются).
+- Уведомления: опциональный `UNATTENDED_UPGRADES_MAIL` — только при наличии MTA
+  на хосте; авто-перезагрузка всегда `false`.
 
 ## Мониторинг (Beszel)
 

@@ -1,0 +1,11 @@
+// Защитный оверрайд: только security-обновления, без авто-перезагрузки.
+// Перекрывает дефолтный Origins-Pattern Ubuntu (который включает и -updates,
+// т.е. ядра и обычные обновления) — авто-обновляем только канал -Security.
+Unattended-Upgrade::Origins-Pattern {
+  "origin=Ubuntu,codename=noble,label=Ubuntu-Security";
+};
+Unattended-Upgrade::Automatic-Reboot "false";
+{% if UNATTENDED_UPGRADES_MAIL %}
+Unattended-Upgrade::Mail "{{ UNATTENDED_UPGRADES_MAIL }}";
+Unattended-Upgrade::MailReport "on-change";
+{% endif %}
