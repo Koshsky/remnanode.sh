@@ -72,13 +72,17 @@
         docker ps --format {% raw %}'{{.Names}}'{% endraw %} | grep -qx remnanode
       changed_when: false
 
-    - name: Healthcheck — https://{{ DOMAIN }}/health отвечает 200
+    - name: Healthcheck — https://{{ DOMAIN }}/health отвечает 200 (ждём ACME/старт)
       ansible.builtin.uri:
         url: "https://{{ DOMAIN }}/health"
         method: GET
         status_code: 200
         validate_certs: true
         timeout: 10
+      register: health_uri
+      until: health_uri.status == 200
+      retries: 6
+      delay: 10
 
     - name: Healthcheck — итог
       ansible.builtin.debug:
