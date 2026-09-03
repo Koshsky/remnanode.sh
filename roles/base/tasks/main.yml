@@ -1,7 +1,7 @@
 ---
 # Базовая настройка: hostname, обновления, пакеты, unattended-upgrades.
 
-- name: Установка hostname из имени хоста инвентаря (node-01)
+- name: Установка hostname из имени хоста инвентаря ({{ inventory_hostname }})
   ansible.builtin.hostname:
     name: "{{ inventory_hostname }}"
   when: inventory_hostname != 'localhost'
