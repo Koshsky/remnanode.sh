@@ -1,0 +1,42 @@
+---
+# Обслуживание: продление сертификатов, logrotate, опциональная перезагрузка.
+
+- name: renewable_ssl_certificates.sh → /usr/local/bin
+  ansible.builtin.copy:
+    src: renew_ssl_certificates.sh
+    dest: /usr/local/bin/renew_ssl_certificates.sh
+    mode: "0755"
+
+- name: cron — продление сертификатов (03:00)
+  ansible.builtin.cron:
+    name: certbot renew
+    minute: "0"
+    hour: "3"
+    job: /usr/local/bin/renew_ssl_certificates.sh
+
+- name: Проверка AUTO_REBOOT
+  ansible.builtin.assert:
+    that:
+      - AUTO_REBOOT in ['', 'daily', 'weekly']
+    fail_msg: "AUTO_REBOOT должен быть daily, weekly или пустым (сейчас: {{ AUTO_REBOOT }})"
+
+- name: cron — авто-перезагрузка (по AUTO_REBOOT)
+  ansible.builtin.cron:
+    name: auto-reboot
+    minute: "0"
+    hour: "5"
+    weekday: "{{ '0' if AUTO_REBOOT == 'weekly' else '*' }}"
+    job: /sbin/reboot
+    state: "{{ 'present' if AUTO_REBOOT in ['daily', 'weekly'] else 'absent' }}"
+
+- name: logrotate — /var/log/remnanode
+  ansible.builtin.copy:
+    src: logrotate-remnanode
+    dest: /etc/logrotate.d/remnanode
+    mode: "0644"
+
+- name: logrotate.timer — включить и запустить
+  ansible.builtin.systemd:
+    name: logrotate.timer
+    enabled: true
+    state: started

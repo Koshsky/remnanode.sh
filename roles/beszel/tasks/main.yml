@@ -1,0 +1,46 @@
+---
+# Beszel-агент: пушит метрики на hub. Если BESZEL_HUB_URL пуст — не ставится.
+# Опционально: UFW-правило для SSH-режима (BESZEL_ALLOW_FROM = IP/подсеть hub'а).
+
+- name: Beszel — пропуск (HUB_URL не задан)
+  ansible.builtin.debug:
+    msg: "BESZEL_HUB_URL не задан — Beszel-агент не ставится"
+  when: not (BESZEL_HUB_URL | default('') | length > 0)
+
+- name: Beszel — проверка ключа и токена
+  ansible.builtin.assert:
+    that:
+      - BESZEL_AGENT_KEY | default('') | length > 0
+      - BESZEL_TOKEN | default('') | length > 0
+    fail_msg: "BESZEL_HUB_URL задан, но BESZEL_AGENT_KEY/BESZEL_TOKEN пусты (выдаёт Web-UI hub'а, Add System)"
+  when: BESZEL_HUB_URL | default('') | length > 0
+
+- name: Каталог /opt/beszel-agent
+  ansible.builtin.file:
+    path: /opt/beszel-agent
+    state: directory
+    mode: "0755"
+  when: BESZEL_HUB_URL | default('') | length > 0
+
+- name: docker-compose агента из шаблона
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: /opt/beszel-agent/docker-compose.yml
+    mode: "0644"
+  when: BESZEL_HUB_URL | default('') | length > 0
+
+- name: Beszel-агент (docker compose up)
+  community.docker.docker_compose_v2:
+    project_src: /opt/beszel-agent
+    state: present
+  when: BESZEL_HUB_URL | default('') | length > 0
+
+- name: UFW — порт агента только для hub (SSH-режим)
+  community.general.ufw:
+    rule: allow
+    from_ip: "{{ BESZEL_ALLOW_FROM }}"
+    port: "{{ BESZEL_AGENT_PORT }}"
+    proto: tcp
+  when:
+    - BESZEL_HUB_URL | default('') | length > 0
+    - BESZEL_ALLOW_FROM | default('') | length > 0

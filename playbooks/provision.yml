@@ -1,0 +1,56 @@
+---
+# Полная настройка новой remnanode (Ubuntu 24.04).
+#
+# Первый запуск:  ansible-playbook -i inventory/hosts.ini playbooks/provision.yml -k
+#   (-k спросит root-пароль; ключи будут сгенерированы в keys/<host>/ и установлены
+#   в authorized_keys для root и создаваемого пользователя).
+# Повторные:      ansible-playbook -i inventory/hosts.ini playbooks/provision.yml
+#   (root по ключу — пароль и парольный вход уже запрещены).
+
+- name: Подготовка ключей на контрольной машине
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Каталоги ключей
+      ansible.builtin.file:
+        path: "keys/{{ item }}"
+        state: directory
+      loop: "{{ groups['remnanodes'] }}"
+
+    - name: Генерация ключевой пары (не перезаписывает существующую)
+      community.crypto.openssh_keypair:
+        path: "keys/{{ item }}/id_ed25519"
+        type: ed25519
+        comment: "ansible-remnanode-{{ item }}"
+      loop: "{{ groups['remnanodes'] }}"
+
+    - name: Добавить хосты с путём к приватному ключу
+      ansible.builtin.add_host:
+        name: "{{ item }}"
+        groups: provision
+        ansible_ssh_private_key_file: "keys/{{ item }}/id_ed25519"
+      loop: "{{ groups['remnanodes'] }}"
+
+- name: Настройка remnanode
+  hosts: provision
+  gather_facts: true
+  become: true
+  pre_tasks:
+    - name: Проверка обязательных переменных
+      ansible.builtin.assert:
+        that:
+          - NEW_USER_LOGIN | default('') | length > 0
+          - NEW_USER_PASSWORD | default('') | length > 0
+          - EMAIL | default('') | length > 0
+          - REMNAWAVE_SECRET_KEY | default('') | length > 0
+          - DOMAIN_ZONE | default('') | length > 0
+        fail_msg: "Заполните обязательные переменные в group_vars/all/vars.yml"
+  roles:
+    - base
+    - security
+    - docker
+    - certbot
+    - nginx
+    - remnanode
+    - beszel
+    - maintenance
