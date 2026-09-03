@@ -2,4 +2,4 @@
 - name: restart caddy container
   community.docker.docker_compose_v2:
     project_src: /opt/caddy
-    restarted: true
+    state: restarted
