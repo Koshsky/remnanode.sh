@@ -18,6 +18,8 @@
     update_cache: true
     cache_valid_time: 3600
 
+# Ручной прогон playbook = осознанное полное обновление системы (включая ядра из -updates).
+# Автоматический режим — только security (unattended-upgrades, см. 20auto-upgrades/99-оверрайд).
 - name: Полное обновление системы
   ansible.builtin.apt:
     upgrade: full

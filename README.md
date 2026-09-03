@@ -86,6 +86,20 @@ ansible-playbook -i inventory/hosts.ini playbooks/provision.yml
   `20auto-upgrades`, таймеры останавливаются).
 - Уведомления: опциональный `UNATTENDED_UPGRADES_MAIL` — только при наличии MTA
   на хосте; авто-перезагрузка всегда `false`.
+- **Ручной прогон playbook** при этом делает *полное* обновление (`apt full-upgrade`,
+  включая ядра из `-updates`) — это осознанное действие оператора; в авто-режиме
+  (unattended-upgrades) обновляется только security.
+
+### Секреты (ansible-vault)
+
+`group_vars/all/vars.yml` и `keys/` gitignored, но лежат на диске открытым текстом.
+Для продакшена рекомендуется зашифровать секреты:
+
+```bash
+ansible-vault encrypt group_vars/all/vars.yml       # пароль спросит при запуске
+ansible-playbook ... --ask-vault-pass
+# либо переменные окружения: ANSIBLE_VAULT_PASSWORD_FILE=...
+```
 
 ## Мониторинг (Beszel)
 
