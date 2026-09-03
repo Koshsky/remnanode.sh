@@ -21,6 +21,11 @@
   changed_when: false
   when: not cert_stat.stat.exists
 
+- name: Остановить наш nginx перед выдачей (если запущен с прошлого прогона)
+  ansible.builtin.shell: "docker stop nginx 2>/dev/null || true"
+  changed_when: false
+  when: not cert_stat.stat.exists
+
 - name: Получение SSL-сертификата для {{ DOMAIN }}
   ansible.builtin.command:
     cmd: "certbot certonly --standalone --non-interactive --agree-tos --email {{ EMAIL }} -d {{ DOMAIN }} --http-01-port 80 --cert-name {{ DOMAIN }}"

@@ -8,7 +8,7 @@
   become: true
   tasks:
     - name: Статус nginx-контейнера
-      ansible.builtin.shell: "docker ps -a --filter name=nginx --format '{{ .Names }}\t{{ .Status }}'"
+      ansible.builtin.shell: "docker ps -a --filter name=nginx"
       register: nginx_stat
       changed_when: false
       ignore_errors: true
@@ -23,6 +23,17 @@
         - cleanup_remove_nginx | default(false)
         - nginx_stat.stdout | length > 0
       ignore_errors: true
+
+    - name: Кто занимает порт 80 + процессы web
+      ansible.builtin.shell: |
+        ss -tlnp | grep ':80 ' || true
+        pgrep -af 'nginx|certbot|apache|caddy' || true
+      register: p80
+      changed_when: false
+
+    - name: Факт — порт 80 / процессы
+      ansible.builtin.debug:
+        var: p80.stdout_lines
 
     - name: Каталог сертификатов letsencrypt
       ansible.builtin.shell: "ls -la /etc/letsencrypt/live/ 2>/dev/null || echo 'каталога нет'"
