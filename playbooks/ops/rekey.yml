@@ -34,11 +34,11 @@
     - name: root — новый ключ
       ansible.builtin.authorized_key:
         user: root
-        key: "{{ lookup('file', 'keys/' ~ inventory_hostname ~ '/id_ed25519.pub') }}"
+        key: "{{ lookup('file', playbook_dir ~ '/keys/' ~ inventory_hostname ~ '/id_ed25519.pub') }}"
         state: present
 
     - name: Пользователь — новый ключ
       ansible.builtin.authorized_key:
         user: "{{ NEW_USER_LOGIN }}"
-        key: "{{ lookup('file', 'keys/' ~ inventory_hostname ~ '/id_ed25519.pub') }}"
+        key: "{{ lookup('file', playbook_dir ~ '/keys/' ~ inventory_hostname ~ '/id_ed25519.pub') }}"
         state: present
