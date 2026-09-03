@@ -6,6 +6,12 @@
     name: "{{ inventory_hostname }}"
   when: inventory_hostname != 'localhost'
 
+- name: cloud-init — preserve hostname (не сбрасывать при перезагрузках)
+  ansible.builtin.copy:
+    src: 99-preserve-hostname.cfg
+    dest: /etc/cloud/cloud.cfg.d/99-preserve-hostname.cfg
+    mode: "0644"
+
 - name: /etc/hosts — 127.0.1.1 (Ubuntu-соглашение, иначе "Unable to resolve host")
   ansible.builtin.lineinfile:
     path: /etc/hosts
