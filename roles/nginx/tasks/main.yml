@@ -19,7 +19,7 @@
     dest: /opt/nginx/docker-compose.yml
     mode: "0644"
 
-- name: nginx.conf из шаблона ({{ DOMAIN }})
+- name: nginx.conf из шаблона
   ansible.builtin.template:
     src: nginx.conf.j2
     dest: /opt/nginx/nginx.conf
