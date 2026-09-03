@@ -84,7 +84,7 @@ ansible-playbook -i inventory/hosts.ini playbooks/provision.yml
 1. Генерирует ключи, ставит hostname (имя из инвентаря) и обновляет систему.
 2. Пакеты: Docker CE (+ compose plugin), fail2ban, ufw, openssh-server, sudo, unattended-upgrades.
 3. Пользователь + SSH-ключи (root и user) → sshd (свой порт, root-пароль и пароли запрещены).
-4. fail2ban (sshd, nginx-http-auth, nginx-limit-req) и UFW (default deny).
+4. fail2ban (sshd) и UFW (default deny).
 5. Caddy в Docker: сам выпускает и продлевает SSL для домена узла (ACME) и отдаёт
    landing/health за xray (unix-сокет, PROXY protocol) → RemnaNode (образ пинится 2.7.0).
 6. Cron: zapret.dat (02:00/14:00), опц. перезагрузка; logrotate (продление SSL — на Caddy).
