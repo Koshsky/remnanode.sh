@@ -5,8 +5,11 @@
 # --- обязательные ---
 NEW_USER_LOGIN: user
 NEW_USER_PASSWORD: ""
-EMAIL: you@example.com
 REMNAWAVE_SECRET_KEY: ""
+
+# --- опционально ---
+# Почта для ACME-аккаунта Caddy (необязательна при http-01; можно оставить пустой)
+EMAIL: you@example.com
 
 # --- сеть / домен ---
 # Зона по умолчанию для всего парка. Если у нод разные зоны/домены —

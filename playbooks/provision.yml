@@ -41,7 +41,6 @@
         that:
           - NEW_USER_LOGIN | default('') | length > 0
           - NEW_USER_PASSWORD | default('') | length > 0
-          - EMAIL | default('') | length > 0
           - REMNAWAVE_SECRET_KEY | default('') | length > 0
           - DOMAIN_ZONE | default('') | length > 0
           - DOMAIN | default('') | length > 0

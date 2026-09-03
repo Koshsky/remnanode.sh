@@ -2,7 +2,7 @@
 
 Полная настройка свежих машин **Ubuntu 24.04 (noble)** через Ansible:
 безопасность (SSH-ключи, fail2ban, UFW), обновления (в т.ч. unattended-upgrades),
-Docker, SSL (certbot), nginx, RemnaNode и мониторинг парка (Beszel).
+Docker, nginx-замена — Caddy (SSL сам), RemnaNode и мониторинг парка (Beszel).
 
 Единственный ввод при первом запуске — **root-логин и пароль** машины. Дальше
 Ansible работает по сгенерированным SSH-ключам.
@@ -39,7 +39,7 @@ cp inventory/group_vars/all/vars.yml.template inventory/group_vars/all/vars.yml 
 | Переменная | Обязательная | Описание |
 |---|---|---|
 | `NEW_USER_LOGIN` / `NEW_USER_PASSWORD` | да | Пользователь (sudo) и его пароль |
-| `EMAIL` | да | Почта для certbot |
+| `EMAIL` | нет | Почта для ACME-аккаунта Caddy (необязательна при http-01) |
 | `REMNAWAVE_SECRET_KEY` | да | Секрет RemnaWave |
 | `DOMAIN_ZONE` | да | Зона по умолчанию: `DOMAIN = <hostname>.<DOMAIN_ZONE>`; для нод с другим доменом — `inventory/host_vars/<host>.yml` (`DOMAIN`/`DOMAIN_ZONE` перекроет) |
 | `DOMAIN` | — | Вычисляется автоматически; переопределяется в `inventory/host_vars/<host>.yml` |
@@ -82,11 +82,12 @@ ansible-playbook -i inventory/hosts.ini playbooks/provision.yml
 ## Что делает playbook
 
 1. Генерирует ключи, ставит hostname (имя из инвентаря) и обновляет систему.
-2. Пакеты: Docker CE (+ compose plugin), fail2ban, ufw, certbot, openssh-server, sudo, unattended-upgrades.
+2. Пакеты: Docker CE (+ compose plugin), fail2ban, ufw, openssh-server, sudo, unattended-upgrades.
 3. Пользователь + SSH-ключи (root и user) → sshd (свой порт, root-пароль и пароли запрещены).
 4. fail2ban (sshd, nginx-http-auth, nginx-limit-req) и UFW (default deny).
-5. SSL (certbot standalone на свободном 80) → nginx в Docker → RemnaNode (образ пинится 2.7.0).
-6. Cron: продление сертификатов (03:00), zapret.dat (02:00/14:00), опц. перезагрузка; logrotate.
+5. Caddy в Docker: сам выпускает и продлевает SSL для домена узла (ACME) и отдаёт
+   landing/health за xray (unix-сокет, PROXY protocol) → RemnaNode (образ пинится 2.7.0).
+6. Cron: zapret.dat (02:00/14:00), опц. перезагрузка; logrotate (продление SSL — на Caddy).
 7. Beszel-агент (если задан) + опциональное UFW-правило для SSH-режима.
 
 ### Автообновления (unattended-upgrades)
@@ -141,11 +142,10 @@ roles/
   base/          hostname, apt, пакеты, unattended-upgrades
   security/      пользователь, sshd_config.j2, ключи, fail2ban, ufw
   docker/        Docker CE + compose plugin
-  certbot/       SSL-сертификат (standalone)
-  nginx/         /opt/nginx (conf.j2, статика, логи)
+  caddy/         landing/health за xray + ACME-сертификаты (unix-сокет, PROXY protocol)
   remnanode/     compose.j2 + zapret cron
   beszel/        агент (compose.j2) + UFW-правило
-  maintenance/   cron (renew/reboot), logrotate
+  maintenance/   cron (reboot), logrotate
 ```
 
 ## Устранение неполадок

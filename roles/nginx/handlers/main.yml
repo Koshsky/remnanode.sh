@@ -1,9 +1,0 @@
----
-- name: restart nginx container
-  community.docker.docker_compose_v2:
-    project_src: /opt/nginx
-    restarted: true
-
-- name: reload fail2ban
-  ansible.builtin.command: fail2ban-client reload
-  changed_when: false
