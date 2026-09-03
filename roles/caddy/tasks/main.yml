@@ -12,8 +12,8 @@
   ansible.builtin.shell: "docker rm -f nginx 2>/dev/null; rm -f /dev/shm/nginx.sock 2>/dev/null; true"
   changed_when: false
 
-- name: Убрать конфликтующий/осиротевший контейнер caddy (ручной run, другой проект)
-  ansible.builtin.shell: "docker rm -f caddy 2>/dev/null; true"
+- name: Полный сброс compose-проекта caddy перед подъёмом (чистое состояние)
+  ansible.builtin.shell: "cd /opt/caddy && docker compose down --remove-orphans 2>/dev/null; docker rm -f caddy 2>/dev/null; true"
   changed_when: false
 
 - name: Статика приложения
@@ -39,3 +39,4 @@
   community.docker.docker_compose_v2:
     project_src: /opt/caddy
     state: present
+    recreate: always
