@@ -7,6 +7,20 @@
     state: directory
     mode: "0755"
 
+- name: Проверка наличия сертификата {{ DOMAIN }}
+  ansible.builtin.stat:
+    path: "/etc/letsencrypt/live/{{ DOMAIN }}/fullchain.pem"
+  register: cert_stat
+
+- name: Ожидание A-записи для {{ DOMAIN }} (только при первой выдаче)
+  ansible.builtin.command: "getent ahostsv4 {{ DOMAIN }}"
+  register: dns_check
+  until: dns_check.rc == 0
+  retries: 12
+  delay: 10
+  changed_when: false
+  when: not cert_stat.stat.exists
+
 - name: Получение SSL-сертификата для {{ DOMAIN }}
   ansible.builtin.command:
     cmd: "certbot certonly --standalone --non-interactive --agree-tos --email {{ EMAIL }} -d {{ DOMAIN }} --http-01-port 80 --cert-name {{ DOMAIN }}"
