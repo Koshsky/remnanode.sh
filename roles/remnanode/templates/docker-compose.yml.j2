@@ -11,7 +11,8 @@ services:
     volumes:
       - /dev/shm:/dev/shm
       - /var/log/remnanode:/var/log/remnanode
-      - /opt/remnawave/xray/share/zapret.dat:/usr/local/bin/zapret.dat
+      - /opt/remnawave/xray/share/zapret.dat:/usr/local/share/xray/zapret.dat
+      - /opt/remnawave/xray/share/ip-zapret.dat:/usr/local/share/xray/ip-zapret.dat
     logging:
       driver: "json-file"
       options:
