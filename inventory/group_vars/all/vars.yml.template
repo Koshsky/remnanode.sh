@@ -35,12 +35,3 @@ UNATTENDED_UPGRADES_MAIL: ""
 
 # Контрольная машина: статический IP для fail2ban ignoreip (если SSH_CONNECTION на нодах не виден)
 ANSIBLE_CONTROL_IP: ""
-
-# Beszel-агент (если HUB_URL пуст — агент не ставится).
-# Ключ/токен Beszel выдаются на ОДНУ систему (Add System) — для нескольких нод
-# задавайте BESZEL_AGENT_KEY/BESZEL_TOKEN в inventory/host_vars/<node>.yml.
-BESZEL_HUB_URL: "https://dashboard.example.com"
-BESZEL_AGENT_KEY: ""               # из Web-UI hub'а (Add System)
-BESZEL_TOKEN: ""
-BESZEL_AGENT_PORT: 45876
-BESZEL_ALLOW_FROM: ""              # IP/подсеть hub'а — открыть 45876 в UFW (SSH-режим)

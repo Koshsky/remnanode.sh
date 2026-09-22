@@ -5,7 +5,7 @@ Ansible-провижининг ремнанод на **Ubuntu 24.04 (noble)**.
 `ansible-playbook` (playbooks/provision.yml) выполняет полную настройку свежих
 машин одним прогоном: безопасность (SSH-ключи, hardening sshd, fail2ban, UFW),
 обновления (unattended-upgrades), Docker CE, обратный прокси Caddy с авто-SSL
-вместо nginx/certbot, RemnaNode и мониторинг парка (Beszel-агент).
+вместо nginx/certbot и RemnaNode.
 
 Парк авторизуется по **единому park-ключу** (`playbooks/keys/park/id_ed25519`),
 который генерируется при первом запуске. Единственный внешний ввод при первом
@@ -53,10 +53,6 @@ cp inventory/group_vars/all/vars.yml.template inventory/group_vars/all/vars.yml 
 | `AUTO_REBOOT` | нет | `daily`, `weekly` или пусто (выкл) — авто-перезагрузка в 5:00 |
 | `UNATTENDED_UPGRADES` | нет | Автообновления: `true` (по умолчанию, **только security**) или `false` (полностью выключить) |
 | `UNATTENDED_UPGRADES_MAIL` | нет | Email уведомлений unattended-upgrades (пусто — выкл; требует MTA на хосте) |
-| `BESZEL_HUB_URL` | нет | Адрес hub'а Beszel; пусто — агент не ставится |
-| `BESZEL_AGENT_KEY` / `BESZEL_TOKEN` | нет | Ключ/токен из Web-UI hub'а (Add System) |
-| `BESZEL_AGENT_PORT` | нет | Порт агента, по умолчанию 45876 |
-| `BESZEL_ALLOW_FROM` | нет | IP/подсеть hub'а — открыть 45876 в UFW (SSH-режим Beszel) |
 
 ### Быстрые прогоны (скип-логика)
 
@@ -84,8 +80,7 @@ ansible-playbook -i inventory/hosts.ini playbooks/provision.yml
 ```
 
 Новая машина добавляется строкой в `inventory/hosts.ini`
-(`<name> ansible_host=<IP> ansible_user=root`) с последующим прогоном playbook —
-hub Beszel трогать не нужно (агент регистрируется сам).
+(`<name> ansible_host=<IP> ansible_user=root`) с последующим прогоном playbook.
 
 ### Домены / разные доменные зоны
 
@@ -102,14 +97,12 @@ hub Beszel трогать не нужно (агент регистрируетс
 
 ### Секреты на ноду (требование для парка)
 
-RemnaWave выдаёт **по-НОДНЫЙ** secret (внутри зашиты сертификаты ноды), Beszel —
-ключ/токен **на систему** (Add System). Если у нескольких нод один общий секрет —
-в панели RemnaWave нода висит как `timeout of 15000ms exceeded`, в Beszel — red/missing.
-Для каждой ноды сверх первой: `inventory/host_vars/<host>.yml`
+RemnaWave выдаёт **по-НОДНЫЙ** secret (внутри зашиты сертификаты ноды). Если у
+нескольких нод один общий секрет — в панели RemnaWave нода висит как
+`timeout of 15000ms exceeded`. Для каждой ноды сверх первой:
+`inventory/host_vars/<host>.yml`
 ```yaml
 REMNAWAVE_SECRET_KEY: "eyJ...секрет из Settings → Node этой ноды"
-BESZEL_AGENT_KEY: "ssh-ed25519 AAAA..."   # из Add System этой ноды
-BESZEL_TOKEN: "xxxxxxxx-xxxx-..."
 ```
 Провижининг выведет предупреждение (без ошибки), если секреты у нескольких нод совпадают.
 
@@ -126,7 +119,6 @@ BESZEL_TOKEN: "xxxxxxxx-xxxx-..."
    xray принимает VLESS — Caddy :443 НЕ слушает (иначе перехватывал бы клиентов)
    → RemnaNode (образ пинится 2.7.0).
 6. Cron: zapret.dat (02:00/14:00), опц. перезагрузка; logrotate (продление SSL — на Caddy).
-7. Beszel-агент (если задан) + опциональное UFW-правило для SSH-режима.
 
 ### Автообновления (unattended-upgrades)
 
@@ -154,19 +146,6 @@ ansible-playbook ... --ask-vault-pass
 # либо переменные окружения: ANSIBLE_VAULT_PASSWORD_FILE=...
 ```
 
-## Мониторинг (Beszel)
-
-Hub Beszel разворачивается **отдельно на своём VPS** (вне этого репозитория — образ
-`henrygd/beszel`, UI на порту 8090). В этом репо — только **агент** (`roles/beszel`):
-он пушит метрики на hub. Новая нода добавляется через инвентарь и `BESZEL_*`
-переменные, конфиг hub не правится.
-
-```text
-1. В Web-UI hub'а: Add System → скопировать KEY/TOKEN
-2. Вписать BESZEL_HUB_URL / BESZEL_AGENT_KEY / BESZEL_TOKEN в inventory/group_vars/all/vars.yml
-3. Проиграть provision.yml — агент зарегистрируется сам
-```
-
 ## Структура
 
 ```
@@ -183,7 +162,6 @@ roles/
   docker/        Docker CE + compose plugin
   caddy/         landing/health за xray + ACME-сертификаты (TCP-loopback 127.0.0.1:8445)
   remnanode/     compose.j2 + zapret cron
-  beszel/        агент (compose.j2) + UFW-правило
   maintenance/   cron (reboot), logrotate
 ```
 
@@ -191,7 +169,6 @@ roles/
 
 - `Все порты молчат, таймауты` — пакеты не доходят до машины: проверить публичный IP
   ноды (`curl -s ifconfig.me` на ней), DNS, фаервол/панель провайдера.
-- `401 от Beszel` — ключ/токен не совпадают с hub: перевыпустить через Add System.
 - `https://<domain>/health` молчит, хотя caddy/xray Up — проверить в панели RemnaWave
   fallback ноды: dest должен быть `127.0.0.1:8445` (tcp), а не `/dev/shm/nginx.sock`
   (unix-сокет Caddy больше не создаёт).

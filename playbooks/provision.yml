@@ -70,12 +70,11 @@
           - (XRAY_PORT | default('')) is match('^[0-9]+$')
           - (REMNANODE_PORT | default('')) is match('^[0-9]+$')
           - (CADDY_FALLBACK_PORT | default('8445')) is match('^[0-9]+$')
-          - (BESZEL_AGENT_PORT | default('')) is match('^[0-9]+$')
         fail_msg: "Заполните обязательные переменные в inventory/group_vars/all/vars.yml (в т.ч. DOMAIN_ZONE для автоподстановки DOMAIN); порты — числа"
 
-    # RemnaWave раздаёт per-node секреты (внутри зашиты нодные сертификаты), Beszel —
-    # per-system ключи. Если у нескольких нод ОДИН и тот же секрет — панель/hub их
-    # не примет (таймауты в панели, красные в Beszel). Правильно: inventory/host_vars/<node>.yml.
+    # RemnaWave выдаёт ПО-НОДНЫЕ секреты (внутри зашиты нодные сертификаты). Если
+    # у нескольких нод ОДИН и тот же секрет — панель их не примет (timeout 15s).
+    # Правильно: inventory/host_vars/<node>.yml.
     - name: Предупреждение — общий REMNAWAVE_SECRET_KEY у нескольких нод
       ansible.builtin.debug:
         msg: "ВНИМАНИЕ: у нескольких нод один REMNAWAVE_SECRET_KEY. RemnaWave выдаёт ПО-НОДНЫЙ секрет — задай в inventory/host_vars/{{ inventory_hostname }}.yml свой SECRET_KEY из панели (Settings → Node). Иначе нода не подключится к панели (timeout)."
@@ -83,21 +82,12 @@
         - groups['remnanodes'] | default([]) | length > 1
         - groups['remnanodes'] | default([]) | map('extract', hostvars, 'REMNAWAVE_SECRET_KEY') | select('defined') | list | unique | length == 1
       changed_when: false
-
-    - name: Предупреждение — общий Beszel-ключ у нескольких нод
-      ansible.builtin.debug:
-        msg: "ВНИМАНИЕ: у нескольких нод один BESZEL_AGENT_KEY. Beszel выдаёт ключ/токен на СИСТЕМУ (Add System) — задай per-node BESZEL_AGENT_KEY/BESZEL_TOKEN в inventory/host_vars/{{ inventory_hostname }}.yml."
-      when:
-        - groups['remnanodes'] | default([]) | length > 1
-        - groups['remnanodes'] | default([]) | map('extract', hostvars, 'BESZEL_AGENT_KEY') | select('defined') | list | unique | length == 1
-      changed_when: false
   roles:
     - { role: base, tags: [base] }
     - { role: security, tags: [security] }
     - { role: docker, tags: [docker] }
     - { role: caddy, tags: [caddy] }
     - { role: remnanode, tags: [remnanode] }
-    - { role: beszel, tags: [beszel] }
     - { role: maintenance, tags: [maintenance] }
   post_tasks:
     - name: Healthcheck — RemnaNode слушает порт {{ REMNANODE_PORT }}
