@@ -85,8 +85,8 @@
       register: hc_remnanode
       changed_when: false
       until: hc_remnanode.rc == 0
-      retries: 15
-      delay: 10
+      retries: 20
+      delay: 15
       tags: checks
 
     - name: Healthcheck — xray слушает порт {{ XRAY_PORT }}
@@ -94,8 +94,8 @@
       register: hc_xray
       changed_when: false
       until: hc_xray.rc == 0
-      retries: 15
-      delay: 10
+      retries: 20
+      delay: 15
       tags: checks
 
     - name: Healthcheck — контейнеры caddy и remnanode запущены

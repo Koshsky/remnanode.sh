@@ -46,7 +46,27 @@
     mode: "0644"
     force: false
 
-- name: remnanode контейнер (docker compose up)
-  community.docker.docker_compose_v2:
-    project_src: /opt/remnanode
-    state: present
+# compose v2 + явный container_name: если остался контейнер remnanode в состоянии
+# created/exited/dead (прерванный прошлый up/конфликт) — «name already in use» при
+# пересоздании. Чистим НЕ-работающие, затем поднимаем с retry-на-конфликт.
+- name: remnanode — убрать зависшие контейнеры (created/exited/dead)
+  ansible.builtin.shell: |
+    for c in $(docker ps -aq --filter name=^/remnanode$ --filter status=created --filter status=exited --filter status=dead 2>/dev/null); do
+      docker rm -f "$c" >/dev/null 2>&1 || true
+    done
+  changed_when: false
+
+- name: remnanode контейнер (compose up, retry-на-конфликт)
+  ansible.builtin.shell: |
+    cd /opt/remnanode
+    for i in 1 2 3; do
+      if docker compose up -d >/dev/null 2>&1; then exit 0; fi
+      # конфликт имени/зависшее состояние: убрать и повторить
+      for c in $(docker ps -aq --filter name=^/remnanode$ 2>/dev/null); do docker rm -f "$c" >/dev/null 2>&1 || true; done
+      sleep 2
+    done
+    echo "remnanode не поднялся за 3 попытки" >&2
+    docker ps -a --filter name=remnanode
+    docker logs remnanode 2>&1 | tail -20
+    exit 1
+  changed_when: false
