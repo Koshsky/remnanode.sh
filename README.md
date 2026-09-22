@@ -95,16 +95,12 @@ ansible-playbook -i inventory/hosts.ini playbooks/provision.yml
   `host_vars` перекрывает `group_vars/all`. Если hostname машины должен совпадать
   с первым сегментом кастомного домена — хост переименовывается в инвентаре.
 
-### Секреты на ноду (требование для парка)
+### Секреты
 
-RemnaWave выдаёт **по-НОДНЫЙ** secret (внутри зашиты сертификаты ноды). Если у
-нескольких нод один общий секрет — в панели RemnaWave нода висит как
-`timeout of 15000ms exceeded`. Для каждой ноды сверх первой:
-`inventory/host_vars/<host>.yml`
-```yaml
-REMNAWAVE_SECRET_KEY: "eyJ...секрет из Settings → Node этой ноды"
-```
-Провижининг выведет предупреждение (без ошибки), если секреты у нескольких нод совпадают.
+`REMNAWAVE_SECRET_KEY` — **единый секрет RemnaWave-панели**, общий для всех нод
+(идентифицирует панель). Вписывается один раз в `inventory/group_vars/all/vars.yml`
+при деплое панели. Никакой per-node настройки не требуется: `host_vars` используется
+только для `DOMAIN`/`DOMAIN_ZONE`.
 
 ## Что делает playbook
 
