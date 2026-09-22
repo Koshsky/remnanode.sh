@@ -13,3 +13,5 @@ collections/
 .ansible-tmp/
 .pip-cache/
 *.log
+# редакторские артефакты
+*.swp
