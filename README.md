@@ -102,6 +102,16 @@ ansible-playbook -i inventory/hosts.ini playbooks/provision.yml
 при деплое панели. Никакой per-node настройки не требуется: `host_vars` используется
 только для `DOMAIN`/`DOMAIN_ZONE`.
 
+### Порядок добавления новой ноды (панель — после провижининга)
+
+1. Добавь строку в `inventory/hosts.ini`, прогони `provision.yml` — на новой ноде
+   чек-апы xray/HTTPS показывают «...ignoring» + итоговое сообщение: это нормально,
+   **сначала провижининг, потом нода в панели RemnaWave**.
+2. В панели: Nodes → добавь ноду (`{{ DOMAIN }}` / её IP) — конфиг придёт сам,
+   нода поднимет xray на 443.
+3. Повторная проверка: `ansible-playbook -i inventory/hosts.ini playbooks/provision.yml --tags checks --limit <нода>`.
+   Жёсткий режим (упасть при неотвечающем xray/HTTPS): `-e STRICT_CHECKS=true`.
+
 ## Что делает playbook
 
 1. Генерирует park-ключ, ставит hostname (имя из инвентаря) и обновляет систему.

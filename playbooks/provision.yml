@@ -96,6 +96,7 @@
       until: hc_xray.rc == 0
       retries: 20
       delay: 15
+      ignore_errors: true
       tags: checks
 
     - name: Healthcheck — контейнеры caddy и remnanode запущены
@@ -107,6 +108,8 @@
 
     # Healthcheck через 127.0.0.1 (SNI=DOMAIN): реальный путь браузера (xray→caddy),
     # НО без зависимости от внешнего DNS — не ловим ложные красные при устаревших A-записях.
+    # Мягкий: на новой ноде xray/HTTPS появятся ТОЛЬКО после добавления ноды в панель
+    # RemnaWave (порядок работы: провижининг → панель). Жёсткая проверка: -e STRICT_CHECKS=true.
     - name: Healthcheck — https://{{ DOMAIN }}/health отвечает 200 (ждём ACME/старт)
       ansible.builtin.shell: "curl -sk -o /dev/null -w '%{http_code}' --resolve {{ DOMAIN }}:443:127.0.0.1 https://{{ DOMAIN }}/health | grep -q '^200$'"
       register: hc_https
@@ -114,9 +117,27 @@
       until: hc_https.rc == 0
       retries: 12
       delay: 10
+      ignore_errors: true
       tags: checks
 
-    - name: Healthcheck — итог
+    - name: Healthcheck — итог (STATE)
       ansible.builtin.debug:
-        msg: "Все проверки пройдены: RemnaNode :{{ REMNANODE_PORT }}, xray :{{ XRAY_PORT }}, https://{{ DOMAIN }}/health=200"
+        msg: >-
+          {% if hc_xray.failed or hc_https.failed %}
+          Инфраструктура ноды готова, но xray/HTTPS ещё не поднялись (обычно у НОВОЙ ноды,
+          ещё не добавленной в панель RemnaWave: порядок — провижининг СНАЧАЛА, потом нода
+          в панели). Добавь ноду в панель (Nodes → {{ DOMAIN }} / {{ ansible_host }});
+          конфиг придёт сам. Повторная проверка:
+          ansible-playbook -i inventory/hosts.ini playbooks/provision.yml --tags checks --limit {{ inventory_hostname }}
+          {% else %}
+          Все проверки пройдены: RemnaNode :{{ REMNANODE_PORT }}, xray :{{ XRAY_PORT }}, https://{{ DOMAIN }}/health=200
+          {% endif %}
+      tags: checks
+
+    - name: STRICT_CHECKS — xray/HTTPS обязаны отвечать
+      ansible.builtin.fail:
+        msg: "STRICT_CHECKS=true, но xray/HTTPS не отвечают (см. логика тасков выше)"
+      when:
+        - STRICT_CHECKS | default(false) | bool
+        - hc_xray.failed or hc_https.failed
       tags: checks
