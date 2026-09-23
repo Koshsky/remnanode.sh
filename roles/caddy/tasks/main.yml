@@ -17,10 +17,14 @@
   ansible.builtin.shell: "docker rm -f nginx 2>/dev/null; rm -f /dev/shm/nginx.sock 2>/dev/null; true"
   changed_when: false
 
-- name: Убрать любые предыдущие контейнеры проекта caddy (compose-осколки и docker run)
+- name: Убрать осколки проекта caddy (живой контейнер не трогаем)
   ansible.builtin.shell: |
-    docker rm -f caddy 2>/dev/null
+    # compose-осколки caddy и контейнеры в created/exited/dead — удаляем;
+    # РАБОТАЮЩИЙ caddy (Up) не трогаем, чтобы прогон был идемпотентным.
     docker rm -f $(docker ps -aq --filter label=com.docker.compose.project=caddy 2>/dev/null) 2>/dev/null
+    for c in $(docker ps -aq --filter name=^/caddy$ --filter status=created --filter status=exited --filter status=dead 2>/dev/null); do
+      docker rm -f "$c" >/dev/null 2>&1 || true
+    done
     true
   changed_when: false
 
