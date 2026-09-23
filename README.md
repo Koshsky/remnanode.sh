@@ -112,6 +112,31 @@ ansible-playbook -i inventory/hosts.ini playbooks/provision.yml
 3. Повторная проверка: `ansible-playbook -i inventory/hosts.ini playbooks/provision.yml --tags checks --limit <нода>`.
    Жёсткий режим (упасть при неотвечающем xray/HTTPS): `-e STRICT_CHECKS=true`.
 
+### Словарь zapret.dat — оба тега в одном файле
+
+- `zapret.dat` (бинарный, в формате xray geosite) — **один файл с двумя секциями**,
+  они обновляются вместе одной загрузкой:
+  - `ZAPRET` — ~1.66 млн доменов: всё, что заблокировано РКН;
+  - `ZAPRET-ZAPAD` — ~500 доменов: ресурсы, не обслуживающие русские IP.
+- Источник: `https://github.com/kutovoys/ru_gov_zapret/releases/latest/download/zapret.dat`.
+  Cron 02:00/14:00 обновляет **атомарно** (wget во временный файл + `mv`): при сбое
+  GitHub старый файл с обеими секциями сохраняется, пустой/битый не подставляется.
+- Файл монтируется в контейнер одним маунтом (обе секции внутри):
+  `/opt/remnawave/xray/share/zapret.dat:/usr/local/share/xray/zapret.dat` —
+  `/usr/local/share/xray/` это assets-каталог xray (там же geoip.dat/geosite.dat),
+  поэтому в панели правило пишется как `ext:zapret.dat:zapret` (относительно assets).
+- Правило панели RemnaWave (Nodes → нода → Xray Config → routing.rules):
+  ```json
+  { "type": "field", "outboundTag": "BLOCK",
+    "domain": ["ext:zapret.dat:zapret", "ext:zapret.dat:zapret-zapad"] }
+  ```
+- ⚠️ Ноды, провижиненные до фикса маунта, ещё монтируют файл в
+  `/usr/local/bin/zapret.dat` (проверить: `docker exec remnanode mount | grep zapret`).
+  Для них ext-ссылку пиши абсолютным путём:
+  `ext:/usr/local/bin/zapret.dat:zapret`, `ext:/usr/local/bin/zapret.dat:zapret-zapad`
+  — иначе xray не найдёт файл и отклонит конфиг. При следующем ре-провижине маунт
+  станет `/usr/local/share/xray/zapret.dat` и можно вернуть короткие ссылки.
+
 ## Что делает playbook
 
 1. Генерирует park-ключ, ставит hostname (имя из инвентаря) и обновляет систему.
