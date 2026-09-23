@@ -8,11 +8,11 @@ services:
     environment:
       NODE_PORT: "{{ REMNANODE_PORT }}"
       SECRET_KEY: "{{ REMNAWAVE_SECRET_KEY }}"
+    cap_add:
+      - NET_ADMIN
     volumes:
-      - /dev/shm:/dev/shm
       - /var/log/remnanode:/var/log/remnanode
       - /opt/remnawave/xray/share/zapret.dat:/usr/local/share/xray/zapret.dat
-      - /opt/remnawave/xray/share/ip-zapret.dat:/usr/local/share/xray/ip-zapret.dat
     logging:
       driver: "json-file"
       options:

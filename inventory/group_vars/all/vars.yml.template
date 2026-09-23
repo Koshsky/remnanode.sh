@@ -33,3 +33,5 @@ UNATTENDED_UPGRADES_MAIL: ""
 
 # Контрольная машина: статический IP для fail2ban ignoreip (если SSH_CONNECTION на нодах не виден)
 ANSIBLE_CONTROL_IP: ""
+# Доп. пользователи SSH (кроме root и koshsky), напр. исходный аккаунт провайдера: user
+ADDITIONAL_SSH_USERS: ""

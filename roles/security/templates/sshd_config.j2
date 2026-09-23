@@ -22,7 +22,9 @@ UsePAM yes
 # ВАЖНО: AllowUsers должен включать root — Ansible ходит root-ом по ключу
 # (PermitRootLogin prohibit-password выше). Без root в списке нода после рестарта
 # sshd теряет любой SSH-доступ (только консоль провайдера).
-AllowUsers root {{ NEW_USER_LOGIN }}
+# ADDITIONAL_SSH_USERS — доп. разрешённые пользователи (например, исходный
+# аккаунт провайдера), чтобы hardening не отрезал доступ.
+AllowUsers root {{ NEW_USER_LOGIN }}{% if ADDITIONAL_SSH_USERS | default('') %} {{ ADDITIONAL_SSH_USERS }}{% endif %}
 ClientAliveInterval 300
 ClientAliveCountMax 2
 

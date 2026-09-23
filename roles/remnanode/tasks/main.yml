@@ -29,9 +29,9 @@
     hour: "2,14"
     job: "wget -q --timeout=30 -T 30 -O /opt/remnawave/xray/share/zapret.dat https://github.com/kutovoys/ru_gov_zapret/releases/latest/download/zapret.dat"
 
-# zapret.dat/ip-zapret.dat монтируются в контейнер КАК ФАЙЛ; на свежей ноде файлов
-# нет, и docker создал бы пустые КАТАЛОГИ → контейнер не стартует. Скачиваем ДО
-# compose up; при недоступности GitHub гарантируем пустой файл (cron обновит позже).
+# zapret.dat монтируется в контейнер КАК ФАЙЛ; на свежей ноде файла нет, и docker
+# создал бы пустой КАТАЛОГ → контейнер не стартует. Скачиваем ДО compose up;
+# при недоступности GitHub гарантируем пустой файл (cron обновит позже).
 - name: zapret.dat — скачать до старта контейнера
   ansible.builtin.get_url:
     url: https://github.com/kutovoys/ru_gov_zapret/releases/latest/download/zapret.dat
@@ -46,17 +46,10 @@
     mode: "0644"
     force: false
 
-# ip-zapret.dat монтируется в контейнер КАК ФАЙЛ (см. docker-compose.yml.j2).
-# В upstream-релизе (kutovoys/ru_gov_zapret) такого ассета НЕТ (только zapret.dat),
-# поэтому гарантируем пустой файл, чтобы docker не создал каталог. Источник
-# ip-zapret.dat задайте вручную (файл в /opt/remnawave/xray/share/ip-zapret.dat)
-# или впишите URL в крон-таск, когда будет доступен.
-- name: ip-zapret.dat — гарантировать файл (пустой; источник — вручную/по URL)
-  ansible.builtin.copy:
-    content: ""
-    dest: /opt/remnawave/xray/share/ip-zapret.dat
-    mode: "0644"
-    force: false
+- name: ip-zapret.dat — удалить (не используется)
+  ansible.builtin.file:
+    path: "/opt/remnawave/xray/share/ip-zapret.dat"
+    state: absent
 
 # compose v2 + явный container_name: если остался контейнер remnanode в состоянии
 # created/exited/dead (прерванный прошлый up/конфликт) — «name already in use» при
