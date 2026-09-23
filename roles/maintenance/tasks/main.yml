@@ -23,8 +23,28 @@
     dest: /etc/logrotate.d/remnanode
     mode: "0644"
 
+# На минимальных образах logrotate может отсутствовать (на старых нодах он был из
+# коробки) — ставим явно, иначе logrotate.timer не существует и systemd падает.
+- name: logrotate — пакет (бинарник + systemd timer)
+  ansible.builtin.apt:
+    name: logrotate
+    state: present
+
+- name: logrotate — daemon-reload (подхватить новый unit logrotate.timer)
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: logrotate.timer — unit присутствует на диске
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - /usr/lib/systemd/system/logrotate.timer
+    - /lib/systemd/system/logrotate.timer
+  register: logrotate_timer_unit
+
 - name: logrotate.timer — включить и запустить
   ansible.builtin.systemd:
     name: logrotate.timer
     enabled: true
     state: started
+  when: logrotate_timer_unit.results | selectattr('stat.exists', 'equalto', true) | list | length > 0
