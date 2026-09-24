@@ -148,7 +148,7 @@ ansible-playbook -i inventory/hosts.ini playbooks/provision.yml
    в панели RemnaWave у фоллбэка ноды proxyProtocol выключен; listener-wrappers
    tls в Caddy 2.11 режут тела ответов, поэтому схема без wrapper'ов). На :443
    xray принимает VLESS — Caddy :443 НЕ слушает (иначе перехватывал бы клиентов)
-   → RemnaNode (образ — latest).
+   → RemnaNode (образ пинится 2.7.0).
 6. Cron: zapret.dat (02:00/14:00), опц. перезагрузка; logrotate (продление SSL — на Caddy).
 
 ### Автообновления (unattended-upgrades)
